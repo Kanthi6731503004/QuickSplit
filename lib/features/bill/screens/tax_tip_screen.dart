@@ -524,6 +524,17 @@ class _TaxTipScreenState extends State<TaxTipScreen> {
                             ],
                           ),
                         ),
+                        const SizedBox(height: 8),
+
+                        // Save for Later — go home without closing
+                        SizedBox(
+                          width: double.infinity,
+                          child: TextButton.icon(
+                            onPressed: () => context.go('/'),
+                            icon: Icon(LucideIcons.home, size: 18),
+                            label: const Text('Save for Later'),
+                          ),
+                        ),
                       ],
                     ),
                   ),

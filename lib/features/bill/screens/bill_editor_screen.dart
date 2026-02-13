@@ -239,9 +239,9 @@ class _BillEditorScreenState extends State<BillEditorScreen>
                       : _buildItemsList(provider, isDark),
                 ),
 
-                // ── Calculate Button ──
+                // ── Bottom Buttons ──
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 160, 16),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 160, 4),
                   child: ElevatedButton(
                     onPressed: _onCalculate,
                     child: Row(
@@ -252,6 +252,14 @@ class _BillEditorScreenState extends State<BillEditorScreen>
                         Icon(LucideIcons.arrowRight, size: 18),
                       ],
                     ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 160, 12),
+                  child: TextButton.icon(
+                    onPressed: () => context.go('/'),
+                    icon: Icon(LucideIcons.home, size: 18),
+                    label: const Text('Save for Later'),
                   ),
                 ),
               ],
