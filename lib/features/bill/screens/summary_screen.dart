@@ -542,8 +542,9 @@ class _SummaryScreenState extends State<SummaryScreen> {
                             side: BorderSide(
                               color: isDark
                                   ? AppTheme.darkDivider
-                                  : AppTheme.primaryLight
-                                      .withValues(alpha: 0.5),
+                                  : AppTheme.primaryLight.withValues(
+                                      alpha: 0.5,
+                                    ),
                             ),
                             foregroundColor: AppTheme.primaryLight,
                           ),
