@@ -524,18 +524,41 @@ class _TaxTipScreenState extends State<TaxTipScreen> {
                             ],
                           ),
                         ),
-                        const SizedBox(height: 8),
-
-                        // Save for Later — go home without closing
-                        SizedBox(
-                          width: double.infinity,
-                          child: TextButton.icon(
-                            onPressed: () => context.go('/'),
-                            icon: Icon(LucideIcons.home, size: 18),
-                            label: const Text('Save for Later'),
-                          ),
-                        ),
                       ],
+                    ),
+                  ),
+                ),
+
+                // ── Save for Later bar ──
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppTheme.darkSurface : Colors.white,
+                    border: Border(
+                      top: BorderSide(
+                        color: isDark ? AppTheme.darkDivider : AppTheme.divider,
+                      ),
+                    ),
+                  ),
+                  child: Center(
+                    child: OutlinedButton.icon(
+                      onPressed: () => context.go('/'),
+                      icon: Icon(LucideIcons.home, size: 16),
+                      label: const Text('Save for Later'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                        shape: const StadiumBorder(),
+                        side: BorderSide(
+                          color: isDark
+                              ? AppTheme.darkDivider
+                              : AppTheme.primaryLight.withValues(alpha: 0.5),
+                        ),
+                        foregroundColor: AppTheme.primaryLight,
+                      ),
                     ),
                   ),
                 ),

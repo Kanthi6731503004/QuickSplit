@@ -241,7 +241,7 @@ class _BillEditorScreenState extends State<BillEditorScreen>
 
                 // ── Bottom Buttons ──
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 160, 4),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 88, 8),
                   child: ElevatedButton(
                     onPressed: _onCalculate,
                     child: Row(
@@ -254,22 +254,47 @@ class _BillEditorScreenState extends State<BillEditorScreen>
                     ),
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 160, 12),
-                  child: TextButton.icon(
-                    onPressed: () => context.go('/'),
-                    icon: Icon(LucideIcons.home, size: 18),
-                    label: const Text('Save for Later'),
+
+                // ── Save for Later bar ──
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(20, 10, 88, 14),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppTheme.darkSurface : Colors.white,
+                    border: Border(
+                      top: BorderSide(
+                        color: isDark ? AppTheme.darkDivider : AppTheme.divider,
+                      ),
+                    ),
+                  ),
+                  child: Center(
+                    child: OutlinedButton.icon(
+                      onPressed: () => context.go('/'),
+                      icon: Icon(LucideIcons.home, size: 16),
+                      label: const Text('Save for Later'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                        shape: const StadiumBorder(),
+                        side: BorderSide(
+                          color: isDark
+                              ? AppTheme.darkDivider
+                              : AppTheme.primaryLight.withValues(alpha: 0.5),
+                        ),
+                        foregroundColor: AppTheme.primaryLight,
+                      ),
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-          floatingActionButton: FloatingActionButton.extended(
+          floatingActionButton: FloatingActionButton(
             onPressed: _showAddItemSheet,
             tooltip: 'Add Item',
-            icon: const Icon(LucideIcons.plus),
-            label: const Text('Add Item'),
+            child: const Icon(LucideIcons.plus),
           ),
         );
       },
