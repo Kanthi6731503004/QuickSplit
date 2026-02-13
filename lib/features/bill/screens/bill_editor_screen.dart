@@ -232,7 +232,7 @@ class _BillEditorScreenState extends State<BillEditorScreen>
   /// Tap a person to filter items to only those assigned to them.
   Widget _buildPeopleBar(BillProvider provider) {
     return Container(
-      height: 88,
+      height: 96,
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
