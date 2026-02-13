@@ -112,9 +112,7 @@ class _BillEditorScreenState extends State<BillEditorScreen>
                 Navigator.pop(ctx);
               }
             },
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size(0, 44),
-            ),
+            style: ElevatedButton.styleFrom(minimumSize: const Size(0, 44)),
             child: const Text('Save'),
           ),
         ],
@@ -152,9 +150,7 @@ class _BillEditorScreenState extends State<BillEditorScreen>
                 Navigator.pop(ctx);
                 context.push('/bill/${widget.billId}/tax');
               },
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(0, 44),
-              ),
+              style: ElevatedButton.styleFrom(minimumSize: const Size(0, 44)),
               child: const Text('Continue Anyway'),
             ),
           ],

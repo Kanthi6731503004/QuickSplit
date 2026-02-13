@@ -80,9 +80,7 @@ class _SummaryScreenState extends State<SummaryScreen> {
                 nav.go('/');
               });
             },
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size(0, 44),
-            ),
+            style: ElevatedButton.styleFrom(minimumSize: const Size(0, 44)),
             child: const Text('Close Bill'),
           ),
         ],
