@@ -241,60 +241,166 @@ class _BillEditorScreenState extends State<BillEditorScreen>
 
                 // ── Bottom Buttons ──
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 88, 8),
-                  child: ElevatedButton(
-                    onPressed: _onCalculate,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text('Calculate Split'),
-                        const SizedBox(width: 8),
-                        Icon(LucideIcons.arrowRight, size: 18),
-                      ],
-                    ),
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+                  child: Row(
+                    children: [
+                      // ── Calculate Split ──
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: isDark
+                                ? AppTheme.darkPrimaryGradient
+                                : AppTheme.primaryGradient,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppTheme.primaryLight.withValues(
+                                  alpha: 0.3,
+                                ),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: _onCalculate,
+                              borderRadius: BorderRadius.circular(16),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      LucideIcons.calculator,
+                                      size: 20,
+                                      color: Colors.white,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Text(
+                                      'Calculate Split',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 0.3,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withValues(
+                                          alpha: 0.2,
+                                        ),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Icon(
+                                        LucideIcons.arrowRight,
+                                        size: 16,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      // ── Add Item ──
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFFF9800), Color(0xFFFF6D00)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(
+                                0xFFFF9800,
+                              ).withValues(alpha: 0.4),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: _showAddItemSheet,
+                            borderRadius: BorderRadius.circular(16),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 18,
+                                vertical: 16,
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(3),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.25,
+                                      ),
+                                      borderRadius: BorderRadius.circular(7),
+                                    ),
+                                    child: const Icon(
+                                      LucideIcons.plus,
+                                      color: Colors.white,
+                                      size: 18,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Text(
+                                    'Add',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
 
-                // ── Save for Later bar ──
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.fromLTRB(20, 10, 88, 14),
-                  decoration: BoxDecoration(
-                    color: isDark ? AppTheme.darkSurface : Colors.white,
-                    border: Border(
-                      top: BorderSide(
-                        color: isDark ? AppTheme.darkDivider : AppTheme.divider,
+                // ── Save for Later ──
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 14),
+                  child: TextButton.icon(
+                    onPressed: () => context.go('/'),
+                    icon: Icon(LucideIcons.home, size: 16),
+                    label: const Text('Save for Later'),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 14,
                       ),
-                    ),
-                  ),
-                  child: Center(
-                    child: OutlinedButton.icon(
-                      onPressed: () => context.go('/'),
-                      icon: Icon(LucideIcons.home, size: 16),
-                      label: const Text('Save for Later'),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 12,
-                        ),
-                        shape: const StadiumBorder(),
-                        side: BorderSide(
-                          color: isDark
-                              ? AppTheme.darkDivider
-                              : AppTheme.primaryLight.withValues(alpha: 0.5),
-                        ),
-                        foregroundColor: AppTheme.primaryLight,
+                      foregroundColor: isDark
+                          ? AppTheme.darkSubtleText
+                          : AppTheme.subtleText,
+                      textStyle: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
                 ),
               ],
             ),
-          ),
-          floatingActionButton: FloatingActionButton(
-            onPressed: _showAddItemSheet,
-            tooltip: 'Add Item',
-            child: const Icon(LucideIcons.plus),
           ),
         );
       },
