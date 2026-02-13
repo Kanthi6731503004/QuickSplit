@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:quicksplit/core/models/models.dart';
@@ -8,7 +10,7 @@ import 'package:quicksplit/core/providers/bill_provider.dart';
 import 'package:quicksplit/core/providers/theme_provider.dart';
 import 'package:quicksplit/core/theme/app_theme.dart';
 
-/// Home screen showing bill history with FAB to create new bill.
+/// Home screen with greeting header, stats card, segmented filter, and rich bill cards.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -18,6 +20,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late AnimationController _emptyBounceController;
+  int _filterIndex = 0; // 0 = All, 1 = Active, 2 = Closed
 
   @override
   void initState() {
@@ -37,54 +40,271 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     super.dispose();
   }
 
+  String get _greeting {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  }
+
+  List<Bill> _filteredBills(List<Bill> bills) {
+    switch (_filterIndex) {
+      case 1:
+        return bills.where((b) => !b.isClosed).toList();
+      case 2:
+        return bills.where((b) => b.isClosed).toList();
+      default:
+        return bills;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(kToolbarHeight),
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: isDark
-                ? AppTheme.darkPrimaryGradient
-                : AppTheme.primaryGradient,
-          ),
-          child: AppBar(
-            title: const Text('QuickSplit'),
-            centerTitle: false,
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            actions: [
-              IconButton(
-                icon: Icon(
-                  isDark ? Icons.light_mode : Icons.dark_mode,
-                  color: Colors.white,
+      body: SafeArea(
+        child: Consumer<BillProvider>(
+          builder: (context, provider, _) {
+            if (provider.isLoading) {
+              return _buildShimmerLoading(context);
+            }
+
+            final activeBills = provider.bills.where((b) => !b.isClosed).length;
+            final closedBills = provider.bills.where((b) => b.isClosed).length;
+            final filtered = _filteredBills(provider.bills);
+
+            return CustomScrollView(
+              slivers: [
+                // ── Greeting Header ──
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 12, 0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '$_greeting 👋',
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(
+                                      color: isDark
+                                          ? AppTheme.darkSubtleText
+                                          : AppTheme.subtleText,
+                                    ),
+                              ),
+                              const SizedBox(height: 2),
+                              Row(
+                                children: [
+                                  Icon(
+                                    LucideIcons.zap,
+                                    size: 20,
+                                    color: AppTheme.primaryLight,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'QuickSplit',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .headlineSmall
+                                        ?.copyWith(fontWeight: FontWeight.w700),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(
+                            isDark ? Icons.light_mode : Icons.dark_mode,
+                          ),
+                          tooltip: isDark ? 'Light mode' : 'Dark mode',
+                          onPressed: () {
+                            context.read<ThemeProvider>().toggleTheme();
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-                tooltip: isDark ? 'Light mode' : 'Dark mode',
-                onPressed: () {
-                  context.read<ThemeProvider>().toggleTheme();
-                },
-              ),
-            ],
-          ),
+
+                // ── Stats Card & CTA ──
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: isDark
+                              ? [
+                                  const Color(0xFF1B3A1E),
+                                  const Color(0xFF0D2B12),
+                                ]
+                              : [AppTheme.primary, AppTheme.primaryDark],
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppTheme.primary.withValues(
+                              alpha: isDark ? 0.2 : 0.3,
+                            ),
+                            blurRadius: 16,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Stats row
+                          Row(
+                            children: [
+                              _StatPill(
+                                icon: LucideIcons.fileText,
+                                label: 'Active',
+                                value: '$activeBills',
+                              ),
+                              const SizedBox(width: 12),
+                              _StatPill(
+                                icon: LucideIcons.checkCircle,
+                                label: 'Closed',
+                                value: '$closedBills',
+                              ),
+                              const SizedBox(width: 12),
+                              _StatPill(
+                                icon: LucideIcons.users,
+                                label: 'Total',
+                                value: '${provider.bills.length}',
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          // New Bill CTA
+                          SizedBox(
+                            width: double.infinity,
+                            height: 48,
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                HapticFeedback.lightImpact();
+                                context.push('/bill/new');
+                              },
+                              icon: const Icon(Icons.add, size: 20),
+                              label: const Text('New Bill'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: AppTheme.primary,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                textStyle: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                // ── Segmented Tabs ──
+                if (provider.bills.isNotEmpty)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _SegmentedFilter(
+                              labels: [
+                                'All (${provider.bills.length})',
+                                'Active ($activeBills)',
+                                'Closed ($closedBills)',
+                              ],
+                              selectedIndex: _filterIndex,
+                              onChanged: (i) =>
+                                  setState(() => _filterIndex = i),
+                              isDark: isDark,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                // ── Bill List or Empty ──
+                if (provider.bills.isEmpty)
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: _buildEmptyState(context),
+                  )
+                else if (filtered.isEmpty)
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(32),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              _filterIndex == 1
+                                  ? LucideIcons.fileText
+                                  : LucideIcons.checkCircle,
+                              size: 48,
+                              color: AppTheme.subtleText.withValues(alpha: 0.4),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              _filterIndex == 1
+                                  ? 'No active bills'
+                                  : 'No closed bills',
+                              style: Theme.of(context).textTheme.bodyLarge
+                                  ?.copyWith(
+                                    color: isDark
+                                        ? AppTheme.darkSubtleText
+                                        : AppTheme.subtleText,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.only(top: 8, bottom: 100),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        final bill = filtered[index];
+                        return _StaggeredBillCard(
+                          index: index,
+                          bill: bill,
+                          onTap: () => context.push('/bill/${bill.id}'),
+                          onDelete: () =>
+                              _confirmDelete(context, provider, bill),
+                        );
+                      }, childCount: filtered.length),
+                    ),
+                  ),
+              ],
+            );
+          },
         ),
       ),
-      body: Consumer<BillProvider>(
-        builder: (context, provider, _) {
-          if (provider.isLoading) {
-            return _buildShimmerLoading(context);
-          }
-
-          if (provider.bills.isEmpty) {
-            return _buildEmptyState(context);
-          }
-
-          return _buildBillList(context, provider);
-        },
-      ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/bill/new'),
+        onPressed: () {
+          HapticFeedback.lightImpact();
+          context.push('/bill/new');
+        },
         tooltip: 'New Bill',
         icon: const Icon(Icons.add, size: 22),
         label: const Text('New Bill'),
@@ -92,7 +312,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  /// Shimmer skeleton loading matching the card layout.
+  /// Shimmer skeleton loading.
   Widget _buildShimmerLoading(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final baseColor = isDark ? const Color(0xFF2C2C2C) : Colors.grey.shade300;
@@ -100,55 +320,72 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         ? const Color(0xFF3C3C3C)
         : Colors.grey.shade100;
 
-    return ListView.builder(
-      padding: const EdgeInsets.only(top: 8, bottom: 80),
-      itemCount: 5,
-      itemBuilder: (context, _) {
-        return Shimmer.fromColors(
-          baseColor: baseColor,
-          highlightColor: highlightColor,
-          child: Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
+    return SafeArea(
+      child: ListView(
+        padding: const EdgeInsets.only(top: 16, bottom: 80),
+        children: [
+          // Shimmer greeting
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Shimmer.fromColors(
+              baseColor: baseColor,
+              highlightColor: highlightColor,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 180,
-                    height: 18,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
+                  Container(width: 120, height: 14, decoration: _shimmerBox()),
                   const SizedBox(height: 8),
-                  Container(
-                    width: 120,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    width: 160,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
+                  Container(width: 160, height: 22, decoration: _shimmerBox()),
                 ],
               ),
             ),
           ),
-        );
-      },
+          const SizedBox(height: 16),
+          // Shimmer stats card
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Shimmer.fromColors(
+              baseColor: baseColor,
+              highlightColor: highlightColor,
+              child: Container(
+                height: 130,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          // Shimmer cards
+          ...List.generate(
+            4,
+            (_) => Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              child: Shimmer.fromColors(
+                baseColor: baseColor,
+                highlightColor: highlightColor,
+                child: Container(
+                  height: 90,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  /// Animated empty state with subtle bounce.
+  BoxDecoration _shimmerBox() => BoxDecoration(
+    color: Colors.white,
+    borderRadius: BorderRadius.circular(4),
+  );
+
+  /// Animated empty state.
   Widget _buildEmptyState(BuildContext context) {
     return Center(
       child: Padding(
@@ -165,69 +402,26 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 );
               },
               child: Icon(
-                Icons.receipt_long,
-                size: 80,
-                color: AppTheme.subtleText.withValues(alpha: 0.5),
+                LucideIcons.receipt,
+                size: 72,
+                color: AppTheme.subtleText.withValues(alpha: 0.4),
               ),
             ),
             const SizedBox(height: 16),
             Text(
-              'No bills yet!',
+              'No bills yet',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 8),
             Text(
-              'Tap + to split your first bill',
+              'Create your first bill to start splitting',
               style: Theme.of(
                 context,
               ).textTheme.bodyMedium?.copyWith(color: AppTheme.subtleText),
             ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: 200,
-              child: ElevatedButton.icon(
-                onPressed: () => context.push('/bill/new'),
-                icon: const Icon(Icons.add),
-                label: const Text('New Bill'),
-              ),
-            ),
           ],
         ),
       ),
-    );
-  }
-
-  /// Staggered animated bill list.
-  Widget _buildBillList(BuildContext context, BillProvider provider) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final horizontalPadding = AppTheme.getHorizontalPadding(
-          constraints.maxWidth,
-        );
-        final maxWidth = AppTheme.getMaxContentWidth(constraints.maxWidth);
-
-        Widget list = ListView.builder(
-          padding: EdgeInsets.only(
-            top: 8,
-            bottom: 80,
-            left: maxWidth != null ? (constraints.maxWidth - maxWidth) / 2 : 0,
-            right: maxWidth != null ? (constraints.maxWidth - maxWidth) / 2 : 0,
-          ),
-          itemCount: provider.bills.length,
-          itemBuilder: (context, index) {
-            final bill = provider.bills[index];
-            return _StaggeredBillCard(
-              index: index,
-              bill: bill,
-              horizontalPadding: horizontalPadding,
-              onTap: () => context.push('/bill/${bill.id}'),
-              onDelete: () => _confirmDelete(context, provider, bill),
-            );
-          },
-        );
-
-        return list;
-      },
     );
   }
 
@@ -259,18 +453,139 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 }
 
-/// Bill card with staggered fade-in + slide animation.
+// ── Stat Pill (inside green card) ──────────────────────────────────
+
+class _StatPill extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _StatPill({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, size: 18, color: Colors.white.withValues(alpha: 0.9)),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            Text(
+              label,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.7),
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Segmented Filter ───────────────────────────────────────────────
+
+class _SegmentedFilter extends StatelessWidget {
+  final List<String> labels;
+  final int selectedIndex;
+  final ValueChanged<int> onChanged;
+  final bool isDark;
+
+  const _SegmentedFilter({
+    required this.labels,
+    required this.selectedIndex,
+    required this.onChanged,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 40,
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.darkCard : const Color(0xFFF0F0F0),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: List.generate(labels.length, (i) {
+          final selected = i == selectedIndex;
+          return Expanded(
+            child: GestureDetector(
+              onTap: () {
+                HapticFeedback.selectionClick();
+                onChanged(i);
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeInOut,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: selected
+                      ? (isDark ? AppTheme.darkSurface : Colors.white)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: selected
+                      ? [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.06),
+                            blurRadius: 4,
+                            offset: const Offset(0, 1),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Text(
+                  labels[i],
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                    color: selected
+                        ? (isDark ? AppTheme.darkOnSurface : AppTheme.onSurface)
+                        : (isDark
+                              ? AppTheme.darkSubtleText
+                              : AppTheme.subtleText),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+}
+
+// ── Staggered Bill Card (animation wrapper) ────────────────────────
+
 class _StaggeredBillCard extends StatefulWidget {
   final int index;
   final Bill bill;
-  final double horizontalPadding;
   final VoidCallback onTap;
   final VoidCallback onDelete;
 
   const _StaggeredBillCard({
     required this.index,
     required this.bill,
-    required this.horizontalPadding,
     required this.onTap,
     required this.onDelete,
   });
@@ -294,12 +609,11 @@ class _StaggeredBillCardState extends State<_StaggeredBillCard>
     );
     _fadeAnim = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
     _slideAnim = Tween<Offset>(
-      begin: const Offset(0, 0.15),
+      begin: const Offset(0, 0.12),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
 
-    // Stagger by index
-    Future.delayed(Duration(milliseconds: 60 * widget.index), () {
+    Future.delayed(Duration(milliseconds: 50 * widget.index), () {
       if (mounted) _controller.forward();
     });
   }
@@ -316,7 +630,7 @@ class _StaggeredBillCardState extends State<_StaggeredBillCard>
       opacity: _fadeAnim,
       child: SlideTransition(
         position: _slideAnim,
-        child: _BillCard(
+        child: _RichBillCard(
           bill: widget.bill,
           onTap: widget.onTap,
           onDelete: widget.onDelete,
@@ -326,13 +640,14 @@ class _StaggeredBillCardState extends State<_StaggeredBillCard>
   }
 }
 
-/// A card displaying a bill's summary info with person count and total.
-class _BillCard extends StatelessWidget {
+// ── Rich Bill Card ─────────────────────────────────────────────────
+
+class _RichBillCard extends StatelessWidget {
   final Bill bill;
   final VoidCallback onTap;
   final VoidCallback onDelete;
 
-  const _BillCard({
+  const _RichBillCard({
     required this.bill,
     required this.onTap,
     required this.onDelete,
@@ -340,6 +655,7 @@ class _BillCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final dateStr = DateFormat('MMM d, yyyy').format(bill.date);
     final provider = context.read<BillProvider>();
 
@@ -349,115 +665,233 @@ class _BillCard extends StatelessWidget {
       background: Container(
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 24),
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         decoration: BoxDecoration(
           color: AppTheme.error,
           borderRadius: BorderRadius.circular(AppTheme.radiusCard),
         ),
-        child: const Icon(Icons.delete, color: Colors.white),
+        child: const Icon(Icons.delete_outline, color: Colors.white),
       ),
       confirmDismiss: (_) async {
         onDelete();
         return false;
       },
-      child: Card(
-        child: InkWell(
-          onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        child: Material(
+          color: isDark ? AppTheme.darkCard : AppTheme.surface,
           borderRadius: BorderRadius.circular(AppTheme.radiusCard),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    // Bill info
-                    Expanded(
-                      child: Column(
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child:
+                  FutureBuilder<
+                    ({int personCount, double total, List<String> peopleNames})
+                  >(
+                    future: provider.getBillSummary(bill.id),
+                    builder: (context, snapshot) {
+                      final data = snapshot.data;
+                      return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            bill.title,
-                            style: Theme.of(context).textTheme.headlineSmall,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            dateStr,
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Status chip
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: bill.isClosed
-                            ? AppTheme.primaryLight.withValues(alpha: 0.15)
-                            : AppTheme.accent.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            bill.isClosed
-                                ? Icons.check_circle
-                                : Icons.edit_note,
-                            size: 14,
-                            color: bill.isClosed
-                                ? AppTheme.primaryLight
-                                : AppTheme.accent,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            bill.isClosed ? 'Closed' : 'Draft',
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(
+                          // Top row: title + status dot
+                          Row(
+                            children: [
+                              // Status dot
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
                                   color: bill.isClosed
                                       ? AppTheme.primaryLight
                                       : AppTheme.accent,
-                                  fontWeight: FontWeight.w600,
                                 ),
+                              ),
+                              const SizedBox(width: 10),
+                              // Title
+                              Expanded(
+                                child: Text(
+                                  bill.title,
+                                  style: Theme.of(context).textTheme.titleMedium
+                                      ?.copyWith(fontWeight: FontWeight.w600),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              // Amount badge
+                              if (data != null && data.total > 0)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: isDark
+                                        ? AppTheme.primary.withValues(
+                                            alpha: 0.2,
+                                          )
+                                        : AppTheme.primaryLight.withValues(
+                                            alpha: 0.12,
+                                          ),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    '฿${data.total.toStringAsFixed(0)}',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: isDark
+                                          ? AppTheme.primaryLight
+                                          : AppTheme.primary,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          // Bottom row: date + avatars + status label
+                          Row(
+                            children: [
+                              // Date
+                              Icon(
+                                LucideIcons.calendar,
+                                size: 13,
+                                color: isDark
+                                    ? AppTheme.darkSubtleText
+                                    : AppTheme.subtleText,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                dateStr,
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(
+                                      color: isDark
+                                          ? AppTheme.darkSubtleText
+                                          : AppTheme.subtleText,
+                                    ),
+                              ),
+                              const SizedBox(width: 12),
+                              // Person avatars (stacked)
+                              if (data != null && data.peopleNames.isNotEmpty)
+                                _StackedAvatars(names: data.peopleNames),
+                              const Spacer(),
+                              // Status label
+                              Text(
+                                bill.isClosed ? 'Closed' : 'Draft',
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(
+                                      color: bill.isClosed
+                                          ? AppTheme.primaryLight
+                                          : AppTheme.accent,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 11,
+                                    ),
+                              ),
+                            ],
                           ),
                         ],
-                      ),
-                    ),
-                  ],
-                ),
-                // Person count + total amount row
-                const SizedBox(height: 8),
-                FutureBuilder<({int personCount, double total})>(
-                  future: provider.getBillSummary(bill.id),
-                  builder: (context, snapshot) {
-                    if (!snapshot.hasData) {
-                      return const SizedBox(height: 14);
-                    }
-                    final data = snapshot.data!;
-                    final personLabel = data.personCount == 1
-                        ? '1 person'
-                        : '${data.personCount} people';
-                    final totalStr = '฿${data.total.toStringAsFixed(2)}';
-                    return Text(
-                      data.personCount > 0
-                          ? '$personLabel · $totalStr'
-                          : 'No participants yet',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppTheme.subtleText,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    );
-                  },
-                ),
-              ],
+                      );
+                    },
+                  ),
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ── Stacked Avatars ────────────────────────────────────────────────
+
+class _StackedAvatars extends StatelessWidget {
+  final List<String> names;
+  static const double _size = 24;
+  static const double _overlap = 8;
+  static const int _maxShow = 4;
+
+  const _StackedAvatars({required this.names});
+
+  @override
+  Widget build(BuildContext context) {
+    final show = names.take(_maxShow).toList();
+    final extra = names.length - _maxShow;
+    final totalWidth =
+        _size +
+        (show.length - 1) * (_size - _overlap) +
+        (extra > 0 ? _size - _overlap : 0);
+
+    return SizedBox(
+      width: totalWidth,
+      height: _size,
+      child: Stack(
+        children: [
+          ...show.asMap().entries.map((entry) {
+            final i = entry.key;
+            final name = entry.value;
+            final color = AppTheme.getPersonColor(i);
+            return Positioned(
+              left: i * (_size - _overlap),
+              child: Container(
+                width: _size,
+                height: _size,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? AppTheme.darkCard
+                        : AppTheme.surface,
+                    width: 2,
+                  ),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  name.isNotEmpty ? name[0].toUpperCase() : '?',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            );
+          }),
+          if (extra > 0)
+            Positioned(
+              left: show.length * (_size - _overlap),
+              child: Container(
+                width: _size,
+                height: _size,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? AppTheme.darkSurface
+                      : const Color(0xFFE0E0E0),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? AppTheme.darkCard
+                        : AppTheme.surface,
+                    width: 2,
+                  ),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  '+$extra',
+                  style: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? AppTheme.darkOnSurface
+                        : AppTheme.onSurface,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

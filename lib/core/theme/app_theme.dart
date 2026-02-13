@@ -126,14 +126,16 @@ class AppTheme {
       ),
       scaffoldBackgroundColor: background,
       appBarTheme: AppBarTheme(
-        backgroundColor: primary,
-        foregroundColor: Colors.white,
+        backgroundColor: surface,
+        foregroundColor: onSurface,
         elevation: 0,
-        centerTitle: true,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
+        centerTitle: false,
         titleTextStyle: GoogleFonts.poppins(
           fontSize: 20,
           fontWeight: FontWeight.w600,
-          color: Colors.white,
+          color: onSurface,
         ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
@@ -306,10 +308,12 @@ class AppTheme {
       ),
       scaffoldBackgroundColor: darkBackground,
       appBarTheme: AppBarTheme(
-        backgroundColor: darkSurface,
+        backgroundColor: darkBackground,
         foregroundColor: darkOnSurface,
         elevation: 0,
-        centerTitle: true,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
+        centerTitle: false,
         titleTextStyle: GoogleFonts.poppins(
           fontSize: 20,
           fontWeight: FontWeight.w600,

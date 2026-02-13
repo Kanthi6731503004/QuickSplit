@@ -340,11 +340,24 @@ class BillProvider extends ChangeNotifier {
   }
 
   /// Get person count and total for a bill (for home screen cards).
-  Future<({int personCount, double total})> getBillSummary(
-    String billId,
-  ) async {
+  Future<({int personCount, double total, List<String> peopleNames})>
+  getBillSummary(String billId) async {
     final count = await _db.getPersonCount(billId);
     final total = await _db.getBillTotal(billId);
-    return (personCount: count, total: total);
+    final names = await _db.getPeopleNames(billId);
+    return (personCount: count, total: total, peopleNames: names);
+  }
+
+  /// Get stats for the home screen header.
+  ({int activeBills, int closedBills, double totalSpent, int totalPeople})
+  get homeStats {
+    final active = _bills.where((b) => !b.isClosed).length;
+    final closed = _bills.where((b) => b.isClosed).length;
+    return (
+      activeBills: active,
+      closedBills: closed,
+      totalSpent: 0, // filled async
+      totalPeople: 0, // filled async
+    );
   }
 }

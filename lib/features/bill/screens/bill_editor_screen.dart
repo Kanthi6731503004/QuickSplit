@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import 'package:quicksplit/core/models/models.dart';
 import 'package:quicksplit/core/providers/bill_provider.dart';
@@ -163,6 +164,8 @@ class _BillEditorScreenState extends State<BillEditorScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Consumer<BillProvider>(
       builder: (context, provider, _) {
         if (provider.isLoading) {
@@ -177,55 +180,87 @@ class _BillEditorScreenState extends State<BillEditorScreen>
         }
 
         return Scaffold(
-          appBar: AppBar(
-            title: Text(bill.title),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.bar_chart),
-                tooltip: 'Summary',
-                onPressed: provider.items.isNotEmpty
-                    ? () => context.push('/bill/${widget.billId}/summary')
-                    : null,
-              ),
-            ],
-          ),
-          body: Column(
-            children: [
-              const StepProgressIndicator(currentStep: 3),
-
-              // ── People Bar (horizontal scroll with names + subtotals) ──
-              if (provider.people.isNotEmpty) _buildPeopleBar(provider),
-
-              const Divider(height: 1),
-
-              // ── Items List ─────────────────────────────────────
-              Expanded(
-                child: provider.items.isEmpty
-                    ? _buildEmptyItems()
-                    : _buildItemsList(provider),
-              ),
-
-              // ── Calculate Button ───────────────────────────────
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 160, 16),
-                child: ElevatedButton(
-                  onPressed: _onCalculate,
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+          body: SafeArea(
+            child: Column(
+              children: [
+                // ── Inline Header ──
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 12, 12, 0),
+                  child: Row(
                     children: [
-                      Text('Calculate Split'),
-                      SizedBox(width: 8),
-                      Icon(Icons.arrow_forward, size: 18),
+                      IconButton(
+                        onPressed: () => context.go('/'),
+                        icon: const Icon(LucideIcons.arrowLeft, size: 22),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        LucideIcons.utensils,
+                        size: 22,
+                        color: AppTheme.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          bill.title,
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (provider.items.isNotEmpty)
+                        IconButton(
+                          icon: Icon(
+                            LucideIcons.barChart3,
+                            size: 22,
+                            color: isDark
+                                ? AppTheme.darkSubtleText
+                                : AppTheme.subtleText,
+                          ),
+                          tooltip: 'Summary',
+                          onPressed: () =>
+                              context.push('/bill/${widget.billId}/summary'),
+                        ),
                     ],
                   ),
                 ),
-              ),
-            ],
+
+                // ── Step Indicator ──
+                const StepProgressIndicator(currentStep: 3),
+
+                // ── People Bar (containerized) ──
+                if (provider.people.isNotEmpty)
+                  _buildPeopleBar(provider, isDark),
+
+                // ── Items List ──
+                Expanded(
+                  child: provider.items.isEmpty
+                      ? _buildEmptyItems()
+                      : _buildItemsList(provider, isDark),
+                ),
+
+                // ── Calculate Button ──
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 160, 16),
+                  child: ElevatedButton(
+                    onPressed: _onCalculate,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text('Calculate Split'),
+                        const SizedBox(width: 8),
+                        Icon(LucideIcons.arrowRight, size: 18),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
           floatingActionButton: FloatingActionButton.extended(
             onPressed: _showAddItemSheet,
             tooltip: 'Add Item',
-            icon: const Icon(Icons.add),
+            icon: const Icon(LucideIcons.plus),
             label: const Text('Add Item'),
           ),
         );
@@ -233,22 +268,28 @@ class _BillEditorScreenState extends State<BillEditorScreen>
     );
   }
 
-  /// Horizontal scrollable bar showing each person with their name, avatar, and running subtotal.
-  /// Tap a person to filter items to only those assigned to them.
-  Widget _buildPeopleBar(BillProvider provider) {
+  /// People bar — containerized horizontal scroll with avatars + subtotals.
+  Widget _buildPeopleBar(BillProvider provider, bool isDark) {
     return Container(
-      height: 96,
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       padding: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.darkCard : Colors.white,
+        borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+        border: Border.all(
+          color: isDark ? AppTheme.darkDivider : AppTheme.divider,
+        ),
+      ),
+      height: 96,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
         itemCount: provider.people.length,
         itemBuilder: (context, index) {
           final person = provider.people[index];
           final color = AppTheme.getPersonColor(index);
           final isFiltered = _filterPersonId == person.id;
 
-          // Calculate running subtotal for this person
           double subtotal = 0;
           for (final item in provider.items) {
             subtotal += item.getShareForPerson(person.id);
@@ -333,7 +374,7 @@ class _BillEditorScreenState extends State<BillEditorScreen>
               );
             },
             child: Icon(
-              Icons.restaurant_menu,
+              LucideIcons.utensilsCrossed,
               size: 64,
               color: AppTheme.subtleText.withValues(alpha: 0.4),
             ),
@@ -357,8 +398,7 @@ class _BillEditorScreenState extends State<BillEditorScreen>
     );
   }
 
-  Widget _buildItemsList(BillProvider provider) {
-    // Filter items by selected person
+  Widget _buildItemsList(BillProvider provider, bool isDark) {
     final items = _filterPersonId != null
         ? provider.items
               .where((i) => i.assignedUserIds.contains(_filterPersonId))
@@ -370,7 +410,7 @@ class _BillEditorScreenState extends State<BillEditorScreen>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.filter_list_off, size: 48, color: AppTheme.subtleText),
+            Icon(LucideIcons.filterX, size: 48, color: AppTheme.subtleText),
             const SizedBox(height: 8),
             Text(
               'No items assigned to this person',
@@ -395,6 +435,7 @@ class _BillEditorScreenState extends State<BillEditorScreen>
         return _ItemCard(
           item: item,
           people: provider.people,
+          isDark: isDark,
           onTap: () => _showAssignSheet(item),
           onEdit: () => _showEditItemDialog(item),
           onDelete: () {
@@ -409,10 +450,11 @@ class _BillEditorScreenState extends State<BillEditorScreen>
   }
 }
 
-/// Card displaying an item with multi-action swipe (edit + delete) using flutter_slidable.
+/// Rich item card matching the home page design language.
 class _ItemCard extends StatelessWidget {
   final BillItem item;
   final List<Person> people;
+  final bool isDark;
   final VoidCallback onTap;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
@@ -420,6 +462,7 @@ class _ItemCard extends StatelessWidget {
   const _ItemCard({
     required this.item,
     required this.people,
+    required this.isDark,
     required this.onTap,
     required this.onEdit,
     required this.onDelete,
@@ -438,7 +481,7 @@ class _ItemCard extends StatelessWidget {
             onPressed: (_) => onEdit(),
             backgroundColor: Colors.blue,
             foregroundColor: Colors.white,
-            icon: Icons.edit,
+            icon: LucideIcons.pencil,
             label: 'Edit',
             borderRadius: const BorderRadius.only(
               topLeft: Radius.circular(12),
@@ -449,7 +492,7 @@ class _ItemCard extends StatelessWidget {
             onPressed: (_) => onDelete(),
             backgroundColor: AppTheme.error,
             foregroundColor: Colors.white,
-            icon: Icons.delete,
+            icon: LucideIcons.trash2,
             label: 'Delete',
             borderRadius: const BorderRadius.only(
               topRight: Radius.circular(12),
@@ -458,15 +501,18 @@ class _ItemCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Card(
+      child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        shape: RoundedRectangleBorder(
+        decoration: BoxDecoration(
+          color: isDark ? AppTheme.darkCard : Colors.white,
           borderRadius: BorderRadius.circular(AppTheme.radiusCard),
-          side: isWarning
-              ? const BorderSide(color: AppTheme.accent, width: 1.5)
-              : BorderSide.none,
+          border: Border.all(
+            color: isWarning
+                ? AppTheme.accent
+                : (isDark ? AppTheme.darkDivider : AppTheme.divider),
+            width: isWarning ? 1.5 : 1,
+          ),
         ),
-        color: isWarning ? AppTheme.accent.withValues(alpha: 0.04) : null,
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(AppTheme.radiusCard),
@@ -475,75 +521,115 @@ class _ItemCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Item name and price
+                // Item name + price badge
                 Row(
                   children: [
                     if (isWarning)
-                      const Padding(
-                        padding: EdgeInsets.only(right: 6),
+                      Padding(
+                        padding: const EdgeInsets.only(right: 6),
                         child: Icon(
-                          Icons.warning_amber,
-                          size: 18,
+                          LucideIcons.alertTriangle,
+                          size: 16,
                           color: AppTheme.accent,
                         ),
                       ),
                     Expanded(
                       child: Text(
                         item.name,
-                        style: Theme.of(context).textTheme.headlineSmall,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w600),
                       ),
                     ),
-                    Text(
-                      '฿${item.price.toStringAsFixed(2)}',
-                      style: Theme.of(context).textTheme.labelLarge,
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '฿${item.price.toStringAsFixed(2)}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.primary,
+                        ),
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
 
                 // Assigned avatars or hint
                 if (isWarning)
-                  Text(
-                    'Tap to assign people',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppTheme.accent,
-                      fontStyle: FontStyle.italic,
-                    ),
+                  Row(
+                    children: [
+                      Icon(
+                        LucideIcons.userPlus,
+                        size: 14,
+                        color: AppTheme.accent,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Tap to assign people',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.accent,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
                   )
                 else
                   Row(
                     children: [
-                      ...item.assignedUserIds.map((uid) {
-                        final personIndex = people.indexWhere(
-                          (p) => p.id == uid,
-                        );
-                        if (personIndex < 0) return const SizedBox();
-                        final person = people[personIndex];
-                        final color = AppTheme.getPersonColor(personIndex);
+                      // Stacked avatars
+                      SizedBox(
+                        width: item.assignedUserIds.length * 20.0 + 4,
+                        height: 24,
+                        child: Stack(
+                          children: item.assignedUserIds.asMap().entries.map((
+                            entry,
+                          ) {
+                            final idx = entry.key;
+                            final uid = entry.value;
+                            final pIdx = people.indexWhere((p) => p.id == uid);
+                            if (pIdx < 0) return const SizedBox();
+                            final person = people[pIdx];
+                            final color = AppTheme.getPersonColor(pIdx);
 
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 4),
-                          child: CircleAvatar(
-                            backgroundColor: color,
-                            radius: 12,
-                            child: Text(
-                              person.initial,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
+                            return Positioned(
+                              left: idx * 16.0,
+                              child: CircleAvatar(
+                                backgroundColor: color,
+                                radius: 12,
+                                child: Text(
+                                  person.initial,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
-                        );
-                      }),
+                            );
+                          }).toList(),
+                        ),
+                      ),
                       const SizedBox(width: 8),
                       Flexible(
                         child: Text(
                           item.splitCount == 1
                               ? 'Solo · ฿${item.price.toStringAsFixed(2)}'
                               : 'Split ${item.splitCount} ways · ฿${item.pricePerPerson.toStringAsFixed(2)} each',
-                          style: Theme.of(context).textTheme.bodySmall,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDark
+                                ? AppTheme.darkSubtleText
+                                : AppTheme.subtleText,
+                          ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),

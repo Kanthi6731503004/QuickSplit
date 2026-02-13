@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:quicksplit/core/providers/bill_provider.dart';
@@ -11,8 +12,6 @@ import 'package:quicksplit/core/theme/app_theme.dart';
 import 'package:quicksplit/core/widgets/step_progress_indicator.dart';
 
 /// Final summary screen showing the complete breakdown per person.
-/// Features: gradient header card, color-coded left borders, animated number
-/// reveal, and confetti on bill close.
 class SummaryScreen extends StatefulWidget {
   final String billId;
   const SummaryScreen({super.key, required this.billId});
@@ -106,292 +105,428 @@ class _SummaryScreenState extends State<SummaryScreen> {
             final dateStr = DateFormat('MMM d, yyyy').format(bill.date);
 
             return Scaffold(
-              appBar: AppBar(
-                title: Text(bill.title),
-                actions: [
-                  IconButton(
-                    icon: const Icon(Icons.share),
-                    tooltip: 'Share',
-                    onPressed: () => _shareText(context),
-                  ),
-                ],
-              ),
-              body: Column(
-                children: [
-                  const StepProgressIndicator(currentStep: 5),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
+              body: SafeArea(
+                child: Column(
+                  children: [
+                    // ── Inline Header ──
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(8, 12, 12, 0),
+                      child: Row(
                         children: [
-                          // ── Gradient Bill Header Card ──────────────
-                          Container(
-                            decoration: BoxDecoration(
-                              gradient: isDark
-                                  ? AppTheme.darkPrimaryGradient
-                                  : AppTheme.primaryGradient,
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            padding: const EdgeInsets.all(20),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  bill.title,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .headlineMedium
-                                      ?.copyWith(color: Colors.white),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  dateStr,
-                                  style: TextStyle(
-                                    color: Colors.white.withValues(alpha: 0.8),
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '${provider.people.length} people · ${provider.items.length} items',
-                                  style: TextStyle(
-                                    color: Colors.white.withValues(alpha: 0.8),
-                                    fontSize: 13,
-                                  ),
-                                ),
-                                if (bill.taxRate > 0 ||
-                                    bill.serviceChargeRate > 0)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 4),
-                                    child: Text(
-                                      'VAT ${bill.taxRate}% + Service ${bill.serviceChargeRate}%',
-                                      style: TextStyle(
-                                        color: Colors.white.withValues(
-                                          alpha: 0.7,
-                                        ),
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ),
-                                const SizedBox(height: 12),
-                                // Animated grand total in header
-                                TweenAnimationBuilder<double>(
-                                  tween: Tween(
-                                    begin: 0,
-                                    end: provider.grandTotal,
-                                  ),
-                                  duration: const Duration(milliseconds: 800),
-                                  curve: Curves.easeOut,
-                                  builder: (context, value, _) => Text(
-                                    '฿${value.toStringAsFixed(2)}',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 28,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ),
-                              ],
+                          IconButton(
+                            onPressed: () => Navigator.pop(context),
+                            icon: const Icon(LucideIcons.arrowLeft, size: 22),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(
+                            LucideIcons.checkCircle,
+                            size: 22,
+                            color: AppTheme.primary,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              bill.title,
+                              style: Theme.of(context).textTheme.headlineSmall
+                                  ?.copyWith(fontWeight: FontWeight.w700),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          const SizedBox(height: 12),
-
-                          // ── Per-Person Breakdown Cards ─────────────
-                          ...provider.splits.asMap().entries.map((entry) {
-                            final index = entry.key;
-                            final split = entry.value;
-                            final color = AppTheme.getPersonColor(index);
-
-                            return Card(
-                              margin: const EdgeInsets.symmetric(vertical: 6),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              clipBehavior: Clip.antiAlias,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  border: Border(
-                                    left: BorderSide(color: color, width: 4),
-                                  ),
-                                ),
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // Person header
-                                    Row(
-                                      children: [
-                                        CircleAvatar(
-                                          backgroundColor: color,
-                                          radius: 16,
-                                          child: Text(
-                                            split.person.initial,
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 10),
-                                        Expanded(
-                                          child: Text(
-                                            split.person.name,
-                                            style: Theme.of(
-                                              context,
-                                            ).textTheme.headlineSmall,
-                                          ),
-                                        ),
-                                        // Animated total per person
-                                        TweenAnimationBuilder<double>(
-                                          tween: Tween(
-                                            begin: 0,
-                                            end: split.total,
-                                          ),
-                                          duration: Duration(
-                                            milliseconds: 600 + index * 150,
-                                          ),
-                                          curve: Curves.easeOut,
-                                          builder: (context, value, _) => Text(
-                                            '฿${value.toStringAsFixed(2)}',
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .labelLarge
-                                                ?.copyWith(color: color),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const Divider(height: 20),
-
-                                    // Item shares
-                                    ...split.itemShares.map((share) {
-                                      final splitLabel = share.splitCount > 1
-                                          ? ' (1/${share.splitCount})'
-                                          : '';
-                                      return Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 2,
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            const Text(
-                                              '  · ',
-                                              style: TextStyle(fontSize: 16),
-                                            ),
-                                            Expanded(
-                                              child: Text(
-                                                '${share.item.name}$splitLabel',
-                                                style: Theme.of(
-                                                  context,
-                                                ).textTheme.bodyMedium,
-                                              ),
-                                            ),
-                                            Text(
-                                              '฿${share.amount.toStringAsFixed(2)}',
-                                              style: Theme.of(
-                                                context,
-                                              ).textTheme.bodyMedium,
-                                            ),
-                                          ],
-                                        ),
-                                      );
-                                    }),
-                                    const Divider(height: 16),
-
-                                    // Subtotal
-                                    _summaryRow(
-                                      context,
-                                      'Subtotal',
-                                      '฿${split.subtotal.toStringAsFixed(2)}',
-                                    ),
-                                    if (bill.taxRate > 0)
-                                      _summaryRow(
-                                        context,
-                                        'Tax (${bill.taxRate}%)',
-                                        '฿${split.taxAmount.toStringAsFixed(2)}',
-                                        subtle: true,
-                                      ),
-                                    if (bill.serviceChargeRate > 0)
-                                      _summaryRow(
-                                        context,
-                                        'Service (${bill.serviceChargeRate}%)',
-                                        '฿${split.serviceChargeAmount.toStringAsFixed(2)}',
-                                        subtle: true,
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          }),
-                          const SizedBox(height: 16),
-
-                          // ── Grand Total ────────────────────────────
-                          const Divider(),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'Grand Total',
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.headlineSmall,
-                                ),
-                                TweenAnimationBuilder<double>(
-                                  tween: Tween(
-                                    begin: 0,
-                                    end: provider.grandTotal,
-                                  ),
-                                  duration: const Duration(milliseconds: 1000),
-                                  curve: Curves.easeOut,
-                                  builder: (context, value, _) => Text(
-                                    '฿${value.toStringAsFixed(2)}',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .headlineMedium
-                                        ?.copyWith(
-                                          fontWeight: FontWeight.w700,
-                                          color: AppTheme.primary,
-                                        ),
-                                  ),
-                                ),
-                              ],
+                          IconButton(
+                            onPressed: () => _shareText(context),
+                            icon: Icon(
+                              LucideIcons.share2,
+                              size: 20,
+                              color: isDark
+                                  ? AppTheme.darkSubtleText
+                                  : AppTheme.subtleText,
                             ),
+                            tooltip: 'Share',
                           ),
-                          const Divider(),
-                          const SizedBox(height: 16),
-
-                          // ── Action Buttons ─────────────────────────
-                          Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: () => _copyText(context),
-                                  icon: const Icon(Icons.copy, size: 18),
-                                  label: const Text('Copy'),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                flex: 2,
-                                child: ElevatedButton.icon(
-                                  onPressed: () => _closeBill(context),
-                                  icon: const Icon(
-                                    Icons.check_circle,
-                                    size: 18,
-                                  ),
-                                  label: const Text('Close Bill'),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 24),
                         ],
                       ),
                     ),
-                  ),
-                ],
+
+                    // ── Step Indicator ──
+                    const StepProgressIndicator(currentStep: 5),
+
+                    // ── Content ──
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // ── Gradient Bill Header Card ──
+                            Container(
+                              decoration: BoxDecoration(
+                                gradient: isDark
+                                    ? AppTheme.darkPrimaryGradient
+                                    : AppTheme.primaryGradient,
+                                borderRadius: BorderRadius.circular(
+                                  AppTheme.radiusCard,
+                                ),
+                              ),
+                              padding: const EdgeInsets.all(20),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        LucideIcons.calendar,
+                                        size: 14,
+                                        color: Colors.white70,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        dateStr,
+                                        style: TextStyle(
+                                          color: Colors.white.withValues(
+                                            alpha: 0.8,
+                                          ),
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      _headerPill(
+                                        '${provider.people.length} people',
+                                        LucideIcons.users,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      _headerPill(
+                                        '${provider.items.length} items',
+                                        LucideIcons.utensils,
+                                      ),
+                                    ],
+                                  ),
+                                  if (bill.taxRate > 0 ||
+                                      bill.serviceChargeRate > 0)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 8),
+                                      child: Row(
+                                        children: [
+                                          if (bill.taxRate > 0)
+                                            _headerPill(
+                                              'VAT ${bill.taxRate}%',
+                                              LucideIcons.landmark,
+                                            ),
+                                          if (bill.taxRate > 0 &&
+                                              bill.serviceChargeRate > 0)
+                                            const SizedBox(width: 8),
+                                          if (bill.serviceChargeRate > 0)
+                                            _headerPill(
+                                              'Service ${bill.serviceChargeRate}%',
+                                              LucideIcons.heartHandshake,
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                  const SizedBox(height: 16),
+                                  TweenAnimationBuilder<double>(
+                                    tween: Tween(
+                                      begin: 0,
+                                      end: provider.grandTotal,
+                                    ),
+                                    duration: const Duration(milliseconds: 800),
+                                    curve: Curves.easeOut,
+                                    builder: (context, value, _) => Text(
+                                      '฿${value.toStringAsFixed(2)}',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 28,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+
+                            // ── Per-Person Cards ──
+                            ...provider.splits.asMap().entries.map((entry) {
+                              final index = entry.key;
+                              final split = entry.value;
+                              final color = AppTheme.getPersonColor(index);
+
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                decoration: BoxDecoration(
+                                  color: isDark
+                                      ? AppTheme.darkCard
+                                      : Colors.white,
+                                  borderRadius: BorderRadius.circular(
+                                    AppTheme.radiusCard,
+                                  ),
+                                  border: Border.all(
+                                    color: isDark
+                                        ? AppTheme.darkDivider
+                                        : AppTheme.divider,
+                                  ),
+                                ),
+                                child: Column(
+                                  children: [
+                                    // Person header with color accent
+                                    Container(
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: color.withValues(alpha: 0.06),
+                                        borderRadius: const BorderRadius.only(
+                                          topLeft: Radius.circular(12),
+                                          topRight: Radius.circular(12),
+                                        ),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          CircleAvatar(
+                                            backgroundColor: color,
+                                            radius: 18,
+                                            child: Text(
+                                              split.person.initial,
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Text(
+                                              split.person.name,
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ),
+                                          TweenAnimationBuilder<double>(
+                                            tween: Tween(
+                                              begin: 0,
+                                              end: split.total,
+                                            ),
+                                            duration: Duration(
+                                              milliseconds: 600 + index * 150,
+                                            ),
+                                            curve: Curves.easeOut,
+                                            builder: (context, value, _) =>
+                                                Container(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 12,
+                                                        vertical: 4,
+                                                      ),
+                                                  decoration: BoxDecoration(
+                                                    color: color.withValues(
+                                                      alpha: 0.15,
+                                                    ),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          20,
+                                                        ),
+                                                  ),
+                                                  child: Text(
+                                                    '฿${value.toStringAsFixed(2)}',
+                                                    style: TextStyle(
+                                                      fontSize: 14,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                      color: color,
+                                                    ),
+                                                  ),
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+
+                                    // Item shares
+                                    Padding(
+                                      padding: const EdgeInsets.fromLTRB(
+                                        16,
+                                        8,
+                                        16,
+                                        8,
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          ...split.itemShares.map((share) {
+                                            final splitLabel =
+                                                share.splitCount > 1
+                                                ? ' (1/${share.splitCount})'
+                                                : '';
+                                            return Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    vertical: 3,
+                                                  ),
+                                              child: Row(
+                                                children: [
+                                                  Icon(
+                                                    LucideIcons.dot,
+                                                    size: 18,
+                                                    color: color,
+                                                  ),
+                                                  Expanded(
+                                                    child: Text(
+                                                      '${share.item.name}$splitLabel',
+                                                      style: TextStyle(
+                                                        fontSize: 13,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  Text(
+                                                    '฿${share.amount.toStringAsFixed(2)}',
+                                                    style: TextStyle(
+                                                      fontSize: 13,
+                                                      fontWeight:
+                                                          FontWeight.w500,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          }),
+                                          Divider(
+                                            height: 16,
+                                            color: isDark
+                                                ? AppTheme.darkDivider
+                                                : AppTheme.divider,
+                                          ),
+                                          _summaryRow(
+                                            context,
+                                            'Subtotal',
+                                            '฿${split.subtotal.toStringAsFixed(2)}',
+                                          ),
+                                          if (bill.taxRate > 0)
+                                            _summaryRow(
+                                              context,
+                                              'Tax (${bill.taxRate}%)',
+                                              '฿${split.taxAmount.toStringAsFixed(2)}',
+                                              subtle: true,
+                                            ),
+                                          if (bill.serviceChargeRate > 0)
+                                            _summaryRow(
+                                              context,
+                                              'Service (${bill.serviceChargeRate}%)',
+                                              '฿${split.serviceChargeAmount.toStringAsFixed(2)}',
+                                              subtle: true,
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }),
+
+                            const SizedBox(height: 8),
+
+                            // ── Grand Total Container ──
+                            Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                gradient: AppTheme.primaryGradient,
+                                borderRadius: BorderRadius.circular(
+                                  AppTheme.radiusCard,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        LucideIcons.calculator,
+                                        size: 18,
+                                        color: Colors.white70,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Grand Total',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  TweenAnimationBuilder<double>(
+                                    tween: Tween(
+                                      begin: 0,
+                                      end: provider.grandTotal,
+                                    ),
+                                    duration: const Duration(
+                                      milliseconds: 1000,
+                                    ),
+                                    curve: Curves.easeOut,
+                                    builder: (context, value, _) => Text(
+                                      '฿${value.toStringAsFixed(2)}',
+                                      style: TextStyle(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+
+                            // ── Action Buttons ──
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    onPressed: () => _copyText(context),
+                                    icon: const Icon(
+                                      LucideIcons.copy,
+                                      size: 18,
+                                    ),
+                                    label: const Text('Copy'),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  flex: 2,
+                                  child: ElevatedButton.icon(
+                                    onPressed: () => _closeBill(context),
+                                    icon: Icon(
+                                      LucideIcons.checkCircle,
+                                      size: 18,
+                                    ),
+                                    label: const Text('Close Bill'),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+
+                            // Save for Later — go home without closing
+                            SizedBox(
+                              width: double.infinity,
+                              child: TextButton.icon(
+                                onPressed: () => context.go('/'),
+                                icon: Icon(LucideIcons.home, size: 18),
+                                label: const Text('Save for Later'),
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             );
           },
@@ -421,12 +556,38 @@ class _SummaryScreenState extends State<SummaryScreen> {
     );
   }
 
+  Widget _headerPill(String label, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: Colors.white70),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _summaryRow(
     BuildContext context,
     String label,
     String value, {
     bool subtle = false,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 1),
       child: Row(
@@ -434,14 +595,21 @@ class _SummaryScreenState extends State<SummaryScreen> {
         children: [
           Text(
             label,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: subtle ? AppTheme.subtleText : null,
+            style: TextStyle(
+              fontSize: 13,
+              color: subtle
+                  ? (isDark ? AppTheme.darkSubtleText : AppTheme.subtleText)
+                  : null,
             ),
           ),
           Text(
             value,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: subtle ? AppTheme.subtleText : null,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: subtle
+                  ? (isDark ? AppTheme.darkSubtleText : AppTheme.subtleText)
+                  : null,
             ),
           ),
         ],

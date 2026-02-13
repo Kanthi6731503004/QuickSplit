@@ -48,6 +48,7 @@ dependencies:
   flutter_slidable: ^4.0.3
   confetti: ^0.8.0
   animations: ^2.1.1
+  lucide_icons: ^0.257.0
 
 dev_dependencies:
   flutter_test:

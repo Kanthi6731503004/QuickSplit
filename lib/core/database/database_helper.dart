@@ -253,6 +253,18 @@ class DatabaseHelper {
 
   // ── Utility ────────────────────────────────────────────────────
 
+  /// Get people names for a bill (for home screen card avatars).
+  Future<List<String>> getPeopleNames(String billId) async {
+    final db = await database;
+    final result = await db.query(
+      'people',
+      columns: ['name'],
+      where: 'billId = ?',
+      whereArgs: [billId],
+    );
+    return result.map((r) => r['name'] as String).toList();
+  }
+
   /// Get person count for a bill (for display on home screen).
   Future<int> getPersonCount(String billId) async {
     final db = await database;
