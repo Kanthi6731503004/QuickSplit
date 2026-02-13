@@ -32,6 +32,7 @@ class _AddItemSheetState extends State<AddItemSheet> {
   void _addItem() {
     if (!_isValid) return;
 
+    HapticFeedback.lightImpact();
     final provider = context.read<BillProvider>();
     provider.addItem(
       name: _nameController.text.trim(),

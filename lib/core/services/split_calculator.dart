@@ -1,4 +1,5 @@
 import 'package:quicksplit/core/models/models.dart';
+import 'package:quicksplit/core/theme/app_theme.dart';
 
 /// Holds the calculated result for a single person.
 class PersonSplit {
@@ -153,9 +154,11 @@ class SplitCalculator {
     buffer.writeln('📅 ${bill.date.day}/${bill.date.month}/${bill.date.year}');
     buffer.writeln();
 
-    for (final split in splits) {
+    for (int i = 0; i < splits.length; i++) {
+      final split = splits[i];
+      final emoji = AppTheme.getPersonEmoji(i);
       buffer.writeln(
-        '• ${split.person.name}: ฿${split.total.toStringAsFixed(2)}',
+        '$emoji ${split.person.name}: ฿${split.total.toStringAsFixed(2)}',
       );
     }
 

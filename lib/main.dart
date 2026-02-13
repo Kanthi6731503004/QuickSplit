@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:quicksplit/core/database/database_helper.dart';
 import 'package:quicksplit/core/providers/bill_provider.dart';
+import 'package:quicksplit/core/providers/theme_provider.dart';
 import 'package:quicksplit/core/router/app_router.dart';
 import 'package:quicksplit/core/theme/app_theme.dart';
 
@@ -16,13 +17,22 @@ class QuickSplitApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => BillProvider(),
-      child: MaterialApp.router(
-        title: 'QuickSplit',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme,
-        routerConfig: appRouter,
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => BillProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+      ],
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, _) {
+          return MaterialApp.router(
+            title: 'QuickSplit',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: themeProvider.themeMode,
+            routerConfig: appRouter,
+          );
+        },
       ),
     );
   }

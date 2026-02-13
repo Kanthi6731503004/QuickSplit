@@ -1,3 +1,4 @@
+import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:quicksplit/features/bill/screens/bill_editor_screen.dart';
@@ -6,6 +7,26 @@ import 'package:quicksplit/features/bill/screens/add_people_screen.dart';
 import 'package:quicksplit/features/bill/screens/tax_tip_screen.dart';
 import 'package:quicksplit/features/bill/screens/summary_screen.dart';
 import 'package:quicksplit/features/home/screens/home_screen.dart';
+
+/// Custom page with SharedAxisTransition for forward/backward navigation.
+CustomTransitionPage<void> _sharedAxisPage({
+  required GoRouterState state,
+  required Widget child,
+  SharedAxisTransitionType type = SharedAxisTransitionType.horizontal,
+}) {
+  return CustomTransitionPage(
+    key: state.pageKey,
+    child: child,
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      return SharedAxisTransition(
+        animation: animation,
+        secondaryAnimation: secondaryAnimation,
+        transitionType: type,
+        child: child,
+      );
+    },
+  );
+}
 
 /// App-wide routing configuration using GoRouter.
 final GoRouter appRouter = GoRouter(
@@ -23,16 +44,20 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/bill/new',
       name: 'createBill',
-      builder: (context, state) => const CreateBillScreen(),
+      pageBuilder: (context, state) =>
+          _sharedAxisPage(state: state, child: const CreateBillScreen()),
     ),
 
     // Add People to Bill
     GoRoute(
       path: '/bill/:id/people',
       name: 'addPeople',
-      builder: (context, state) {
+      pageBuilder: (context, state) {
         final billId = state.pathParameters['id']!;
-        return AddPeopleScreen(billId: billId);
+        return _sharedAxisPage(
+          state: state,
+          child: AddPeopleScreen(billId: billId),
+        );
       },
     ),
 
@@ -40,9 +65,12 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/bill/:id',
       name: 'billEditor',
-      builder: (context, state) {
+      pageBuilder: (context, state) {
         final billId = state.pathParameters['id']!;
-        return BillEditorScreen(billId: billId);
+        return _sharedAxisPage(
+          state: state,
+          child: BillEditorScreen(billId: billId),
+        );
       },
     ),
 
@@ -50,9 +78,12 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/bill/:id/tax',
       name: 'taxTip',
-      builder: (context, state) {
+      pageBuilder: (context, state) {
         final billId = state.pathParameters['id']!;
-        return TaxTipScreen(billId: billId);
+        return _sharedAxisPage(
+          state: state,
+          child: TaxTipScreen(billId: billId),
+        );
       },
     ),
 
@@ -60,9 +91,13 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/bill/:id/summary',
       name: 'summary',
-      builder: (context, state) {
+      pageBuilder: (context, state) {
         final billId = state.pathParameters['id']!;
-        return SummaryScreen(billId: billId);
+        return _sharedAxisPage(
+          state: state,
+          child: SummaryScreen(billId: billId),
+          type: SharedAxisTransitionType.vertical,
+        );
       },
     ),
   ],

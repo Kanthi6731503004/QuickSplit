@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:quicksplit/core/models/models.dart';
 import 'package:quicksplit/core/providers/bill_provider.dart';
 import 'package:quicksplit/core/theme/app_theme.dart';
+import 'package:quicksplit/core/widgets/step_progress_indicator.dart';
 import 'package:quicksplit/features/bill/widgets/add_item_sheet.dart';
 import 'package:quicksplit/features/bill/widgets/assign_item_sheet.dart';
 
@@ -16,16 +19,30 @@ class BillEditorScreen extends StatefulWidget {
   State<BillEditorScreen> createState() => _BillEditorScreenState();
 }
 
-class _BillEditorScreenState extends State<BillEditorScreen> {
+class _BillEditorScreenState extends State<BillEditorScreen>
+    with TickerProviderStateMixin {
+  String? _filterPersonId;
+  late AnimationController _emptyBounceController;
+
   @override
   void initState() {
     super.initState();
+    _emptyBounceController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = context.read<BillProvider>();
       if (provider.currentBill?.id != widget.billId) {
         provider.loadBill(widget.billId);
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _emptyBounceController.dispose();
+    super.dispose();
   }
 
   void _showAddItemSheet() {
@@ -47,6 +64,60 @@ class _BillEditorScreenState extends State<BillEditorScreen> {
     );
   }
 
+  void _showEditItemDialog(BillItem item) {
+    final nameCtrl = TextEditingController(text: item.name);
+    final priceCtrl = TextEditingController(
+      text: item.price.toStringAsFixed(2),
+    );
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Edit Item'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameCtrl,
+              decoration: const InputDecoration(labelText: 'Name'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: priceCtrl,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              decoration: const InputDecoration(
+                labelText: 'Price (฿)',
+                prefixText: '฿ ',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final name = nameCtrl.text.trim();
+              final price = double.tryParse(priceCtrl.text);
+              if (name.isNotEmpty && price != null && price > 0) {
+                context.read<BillProvider>().updateItem(
+                  item.id,
+                  name: name,
+                  price: price,
+                );
+                Navigator.pop(ctx);
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _onCalculate() {
     final provider = context.read<BillProvider>();
 
@@ -58,7 +129,6 @@ class _BillEditorScreenState extends State<BillEditorScreen> {
     }
 
     if (!provider.allItemsAssigned) {
-      // Show warning dialog
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
@@ -117,7 +187,9 @@ class _BillEditorScreenState extends State<BillEditorScreen> {
           ),
           body: Column(
             children: [
-              // ── People Bar (horizontal scroll with subtotals) ──
+              const StepProgressIndicator(currentStep: 3),
+
+              // ── People Bar (horizontal scroll with names + subtotals) ──
               if (provider.people.isNotEmpty) _buildPeopleBar(provider),
 
               const Divider(height: 1),
@@ -156,10 +228,11 @@ class _BillEditorScreenState extends State<BillEditorScreen> {
     );
   }
 
-  /// Horizontal scrollable bar showing each person with their running subtotal.
+  /// Horizontal scrollable bar showing each person with their name, avatar, and running subtotal.
+  /// Tap a person to filter items to only those assigned to them.
   Widget _buildPeopleBar(BillProvider provider) {
     return Container(
-      height: 72,
+      height: 88,
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
@@ -168,6 +241,7 @@ class _BillEditorScreenState extends State<BillEditorScreen> {
         itemBuilder: (context, index) {
           final person = provider.people[index];
           final color = AppTheme.getPersonColor(index);
+          final isFiltered = _filterPersonId == person.id;
 
           // Calculate running subtotal for this person
           double subtotal = 0;
@@ -175,31 +249,64 @@ class _BillEditorScreenState extends State<BillEditorScreen> {
             subtotal += item.getShareForPerson(person.id);
           }
 
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircleAvatar(
-                  backgroundColor: color,
-                  radius: 18,
-                  child: Text(
-                    person.initial,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
+          return GestureDetector(
+            onTap: () {
+              HapticFeedback.selectionClick();
+              setState(() {
+                _filterPersonId = _filterPersonId == person.id
+                    ? null
+                    : person.id;
+              });
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: isFiltered ? color.withValues(alpha: 0.15) : null,
+                borderRadius: BorderRadius.circular(12),
+                border: isFiltered ? Border.all(color: color, width: 2) : null,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircleAvatar(
+                    backgroundColor: color,
+                    radius: 18,
+                    child: Text(
+                      person.initial,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '฿${subtotal.toStringAsFixed(0)}',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
-                ),
-              ],
+                  const SizedBox(height: 2),
+                  SizedBox(
+                    width: 56,
+                    child: Text(
+                      person.name,
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontWeight: isFiltered
+                            ? FontWeight.w700
+                            : FontWeight.w400,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    '฿${subtotal.toStringAsFixed(0)}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
             ),
           );
         },
@@ -212,10 +319,19 @@ class _BillEditorScreenState extends State<BillEditorScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.restaurant_menu,
-            size: 64,
-            color: AppTheme.subtleText.withValues(alpha: 0.4),
+          AnimatedBuilder(
+            animation: _emptyBounceController,
+            builder: (context, child) {
+              return Transform.translate(
+                offset: Offset(0, -6 * _emptyBounceController.value),
+                child: child,
+              );
+            },
+            child: Icon(
+              Icons.restaurant_menu,
+              size: 64,
+              color: AppTheme.subtleText.withValues(alpha: 0.4),
+            ),
           ),
           const SizedBox(height: 16),
           Text(
@@ -237,15 +353,45 @@ class _BillEditorScreenState extends State<BillEditorScreen> {
   }
 
   Widget _buildItemsList(BillProvider provider) {
+    // Filter items by selected person
+    final items = _filterPersonId != null
+        ? provider.items
+              .where((i) => i.assignedUserIds.contains(_filterPersonId))
+              .toList()
+        : provider.items;
+
+    if (items.isEmpty && _filterPersonId != null) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.filter_list_off, size: 48, color: AppTheme.subtleText),
+            const SizedBox(height: 8),
+            Text(
+              'No items assigned to this person',
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: AppTheme.subtleText),
+            ),
+            TextButton(
+              onPressed: () => setState(() => _filterPersonId = null),
+              child: const Text('Clear filter'),
+            ),
+          ],
+        ),
+      );
+    }
+
     return ListView.builder(
       padding: const EdgeInsets.only(top: 8, bottom: 80),
-      itemCount: provider.items.length,
+      itemCount: items.length,
       itemBuilder: (context, index) {
-        final item = provider.items[index];
+        final item = items[index];
         return _ItemCard(
           item: item,
           people: provider.people,
           onTap: () => _showAssignSheet(item),
+          onEdit: () => _showEditItemDialog(item),
           onDelete: () {
             provider.removeItem(item.id);
             ScaffoldMessenger.of(
@@ -258,17 +404,19 @@ class _BillEditorScreenState extends State<BillEditorScreen> {
   }
 }
 
-/// Card displaying an item with its assignment status.
+/// Card displaying an item with multi-action swipe (edit + delete) using flutter_slidable.
 class _ItemCard extends StatelessWidget {
   final BillItem item;
   final List<Person> people;
   final VoidCallback onTap;
+  final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   const _ItemCard({
     required this.item,
     required this.people,
     required this.onTap,
+    required this.onEdit,
     required this.onDelete,
   });
 
@@ -276,22 +424,44 @@ class _ItemCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isWarning = !item.isAssigned;
 
-    return Dismissible(
+    return Slidable(
       key: ValueKey(item.id),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 24),
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        decoration: BoxDecoration(
-          color: AppTheme.error,
-          borderRadius: BorderRadius.circular(AppTheme.radiusCard),
-        ),
-        child: const Icon(Icons.delete, color: Colors.white),
+      endActionPane: ActionPane(
+        motion: const BehindMotion(),
+        children: [
+          SlidableAction(
+            onPressed: (_) => onEdit(),
+            backgroundColor: Colors.blue,
+            foregroundColor: Colors.white,
+            icon: Icons.edit,
+            label: 'Edit',
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(12),
+              bottomLeft: Radius.circular(12),
+            ),
+          ),
+          SlidableAction(
+            onPressed: (_) => onDelete(),
+            backgroundColor: AppTheme.error,
+            foregroundColor: Colors.white,
+            icon: Icons.delete,
+            label: 'Delete',
+            borderRadius: const BorderRadius.only(
+              topRight: Radius.circular(12),
+              bottomRight: Radius.circular(12),
+            ),
+          ),
+        ],
       ),
-      onDismissed: (_) => onDelete(),
       child: Card(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+          side: isWarning
+              ? const BorderSide(color: AppTheme.accent, width: 1.5)
+              : BorderSide.none,
+        ),
+        color: isWarning ? AppTheme.accent.withValues(alpha: 0.04) : null,
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(AppTheme.radiusCard),
@@ -338,7 +508,6 @@ class _ItemCard extends StatelessWidget {
                 else
                   Row(
                     children: [
-                      // Show assigned person avatars
                       ...item.assignedUserIds.map((uid) {
                         final personIndex = people.indexWhere(
                           (p) => p.id == uid,
@@ -364,12 +533,14 @@ class _ItemCard extends StatelessWidget {
                         );
                       }),
                       const SizedBox(width: 8),
-                      // Split info text
-                      Text(
-                        item.splitCount == 1
-                            ? 'Solo · ฿${item.price.toStringAsFixed(2)}'
-                            : 'Split ${item.splitCount} ways · ฿${item.pricePerPerson.toStringAsFixed(2)} each',
-                        style: Theme.of(context).textTheme.bodySmall,
+                      Flexible(
+                        child: Text(
+                          item.splitCount == 1
+                              ? 'Solo · ฿${item.price.toStringAsFixed(2)}'
+                              : 'Split ${item.splitCount} ways · ฿${item.pricePerPerson.toStringAsFixed(2)} each',
+                          style: Theme.of(context).textTheme.bodySmall,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                   ),
