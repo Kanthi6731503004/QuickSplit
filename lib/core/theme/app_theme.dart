@@ -68,12 +68,12 @@ class AppTheme {
 
   // ── Radius ─────────────────────────────────────────────────────
   static const double radiusCard = 12.0;
-  static const double radiusButton = 24.0;
+  static const double radiusButton = 16.0; // squircle
   static const double radiusInput = 12.0;
   static const double radiusBottomSheet = 16.0;
 
   // ── Sizes ──────────────────────────────────────────────────────
-  static const double buttonHeight = 48.0;
+  static const double buttonHeight = 52.0; // larger CTA
   static const double fabSize = 56.0;
   static const double avatarSize = 36.0;
   static const double touchTarget = 44.0;
@@ -136,11 +136,18 @@ class AppTheme {
           color: Colors.white,
         ),
       ),
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: accent,
         foregroundColor: Colors.white,
-        elevation: 4,
-        shape: CircleBorder(),
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radiusButton),
+        ),
+        extendedPadding: const EdgeInsets.symmetric(horizontal: 20),
+        extendedTextStyle: GoogleFonts.poppins(
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+        ),
       ),
       cardTheme: CardThemeData(
         color: surface,
@@ -161,7 +168,7 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radiusButton),
           ),
-          elevation: 2,
+          elevation: 0,
           textStyle: GoogleFonts.poppins(
             fontSize: 16,
             fontWeight: FontWeight.w600,
@@ -309,11 +316,18 @@ class AppTheme {
           color: darkOnSurface,
         ),
       ),
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: accent,
         foregroundColor: Colors.white,
-        elevation: 4,
-        shape: CircleBorder(),
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radiusButton),
+        ),
+        extendedPadding: const EdgeInsets.symmetric(horizontal: 20),
+        extendedTextStyle: GoogleFonts.poppins(
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+        ),
       ),
       cardTheme: CardThemeData(
         color: darkCard,
@@ -334,7 +348,7 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radiusButton),
           ),
-          elevation: 2,
+          elevation: 0,
           textStyle: GoogleFonts.poppins(
             fontSize: 16,
             fontWeight: FontWeight.w600,

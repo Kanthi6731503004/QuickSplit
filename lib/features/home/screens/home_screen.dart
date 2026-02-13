@@ -83,10 +83,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           return _buildBillList(context, provider);
         },
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/bill/new'),
         tooltip: 'New Bill',
-        child: const Icon(Icons.add, size: 28),
+        icon: const Icon(Icons.add, size: 22),
+        label: const Text('New Bill'),
       ),
     );
   }

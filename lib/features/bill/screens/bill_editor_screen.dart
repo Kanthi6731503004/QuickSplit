@@ -98,6 +98,7 @@ class _BillEditorScreenState extends State<BillEditorScreen>
             onPressed: () => Navigator.pop(ctx),
             child: const Text('Cancel'),
           ),
+          const SizedBox(width: 8),
           ElevatedButton(
             onPressed: () {
               final name = nameCtrl.text.trim();
@@ -111,6 +112,9 @@ class _BillEditorScreenState extends State<BillEditorScreen>
                 Navigator.pop(ctx);
               }
             },
+            style: ElevatedButton.styleFrom(
+              minimumSize: const Size(0, 44),
+            ),
             child: const Text('Save'),
           ),
         ],
@@ -142,11 +146,15 @@ class _BillEditorScreenState extends State<BillEditorScreen>
               onPressed: () => Navigator.pop(ctx),
               child: const Text('Go Back'),
             ),
+            const SizedBox(width: 8),
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(ctx);
                 context.push('/bill/${widget.billId}/tax');
               },
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(0, 44),
+              ),
               child: const Text('Continue Anyway'),
             ),
           ],
@@ -203,7 +211,7 @@ class _BillEditorScreenState extends State<BillEditorScreen>
 
               // ── Calculate Button ───────────────────────────────
               Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(16, 16, 160, 16),
                 child: ElevatedButton(
                   onPressed: _onCalculate,
                   child: const Row(
@@ -218,10 +226,11 @@ class _BillEditorScreenState extends State<BillEditorScreen>
               ),
             ],
           ),
-          floatingActionButton: FloatingActionButton(
+          floatingActionButton: FloatingActionButton.extended(
             onPressed: _showAddItemSheet,
             tooltip: 'Add Item',
-            child: const Icon(Icons.add),
+            icon: const Icon(Icons.add),
+            label: const Text('Add Item'),
           ),
         );
       },
