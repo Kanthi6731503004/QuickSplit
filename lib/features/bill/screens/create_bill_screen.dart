@@ -154,9 +154,7 @@ class _CreateBillScreenState extends State<CreateBillScreen> {
                             controller: _titleController,
                             autofocus: true,
                             textCapitalization: TextCapitalization.words,
-                            decoration: const InputDecoration(
-                              hintText: 'e.g. Pizza Night',
-                            ),
+                            decoration: const InputDecoration(),
                             onChanged: (_) => setState(() {}),
                             onSubmitted: (_) => _createBill(),
                           ),
