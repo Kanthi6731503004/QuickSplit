@@ -34,16 +34,25 @@
 
   <!-- Fix Flutter web double text rendering in text fields -->
   <style>
+    /* Hide native browser input text - Flutter renders its own on canvas */
+    input, textarea,
     flt-glass-pane input,
     flt-glass-pane textarea,
     .flt-text-editing-host input,
-    .flt-text-editing-host textarea {
+    .flt-text-editing-host textarea,
+    flutter-view input,
+    flutter-view textarea {
       color: transparent !important;
       caret-color: white !important;
       outline: none !important;
       border: none !important;
       background: transparent !important;
       box-shadow: none !important;
+      -webkit-text-fill-color: transparent !important;
+      text-shadow: none !important;
+    }
+    input::placeholder, textarea::placeholder {
+      color: transparent !important;
       -webkit-text-fill-color: transparent !important;
     }
   </style>
