@@ -1,6 +1,5 @@
 # 📱 QuickSplit
 
-**Student Name:** Kanthi  
 **Platform:** Mobile (Android/iOS)  
 **Framework:** Flutter + Dart
 
