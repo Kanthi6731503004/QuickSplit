@@ -161,6 +161,26 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // Tagline
+                          Row(
+                            children: [
+                              Icon(
+                                LucideIcons.zap,
+                                size: 13,
+                                color: Colors.white.withValues(alpha: 0.6),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Split bills, not friendships',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.white.withValues(alpha: 0.7),
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
                           // Stats row
                           Row(
                             children: [
@@ -214,6 +234,18 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     ),
                   ),
                 ),
+
+                // ── Resume Banner ──
+                if (provider.bills.any((b) => !b.isClosed))
+                  SliverToBoxAdapter(
+                    child: _ResumeBanner(
+                      bill: provider.bills.firstWhere((b) => !b.isClosed),
+                      isDark: isDark,
+                      onTap: () => context.push(
+                        '/bill/${provider.bills.firstWhere((b) => !b.isClosed).id}',
+                      ),
+                    ),
+                  ),
 
                 // ── Segmented Tabs ──
                 if (provider.bills.isNotEmpty)
@@ -307,7 +339,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         },
         tooltip: 'New Bill',
         icon: const Icon(Icons.add, size: 22),
-        label: const Text('New Bill'),
+        label: const Text('Split a bill'),
       ),
     );
   }
@@ -385,11 +417,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     borderRadius: BorderRadius.circular(4),
   );
 
-  /// Animated empty state.
+  /// How-it-works empty state.
   Widget _buildEmptyState(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.fromLTRB(28, 0, 28, 40),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -401,23 +434,89 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   child: child,
                 );
               },
-              child: Icon(
-                LucideIcons.receipt,
-                size: 72,
-                color: AppTheme.subtleText.withValues(alpha: 0.4),
+              child: Container(
+                width: 76,
+                height: 76,
+                decoration: BoxDecoration(
+                  gradient: AppTheme.primaryGradient,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.primary.withValues(alpha: 0.3),
+                      blurRadius: 18,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  LucideIcons.receipt,
+                  size: 32,
+                  color: Colors.white,
+                ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             Text(
               'No bills yet',
-              style: Theme.of(context).textTheme.headlineSmall,
+              style: Theme.of(context)
+                  .textTheme
+                  .headlineSmall
+                  ?.copyWith(fontWeight: FontWeight.w700),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Text(
-              'Create your first bill to start splitting',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: AppTheme.subtleText),
+              "Here's how QuickSplit works",
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: isDark ? AppTheme.darkSubtleText : AppTheme.subtleText,
+              ),
+            ),
+            const SizedBox(height: 28),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _HowItWorksStep(
+                  number: '1',
+                  icon: LucideIcons.users,
+                  label: 'Setup',
+                  desc: 'Name the bill & add friends',
+                  isDark: isDark,
+                ),
+                _HowItWorksArrow(isDark: isDark),
+                _HowItWorksStep(
+                  number: '2',
+                  icon: LucideIcons.utensils,
+                  label: 'Items',
+                  desc: 'Add items & assign each one',
+                  isDark: isDark,
+                ),
+                _HowItWorksArrow(isDark: isDark),
+                _HowItWorksStep(
+                  number: '3',
+                  icon: LucideIcons.checkCircle,
+                  label: 'Summary',
+                  desc: 'See who owes what',
+                  isDark: isDark,
+                ),
+              ],
+            ),
+            const SizedBox(height: 28),
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  context.push('/bill/new');
+                },
+                icon: const Icon(Icons.add, size: 20),
+                label: const Text('Create your first bill'),
+                style: ElevatedButton.styleFrom(
+                  textStyle: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
+                ),
+              ),
             ),
           ],
         ),
@@ -685,12 +784,20 @@ class _RichBillCard extends StatelessWidget {
           child: InkWell(
             onTap: onTap,
             borderRadius: BorderRadius.circular(AppTheme.radiusCard),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child:
-                  FutureBuilder<
-                    ({int personCount, double total, List<String> peopleNames})
-                  >(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Left accent bar
+                Container(
+                  width: 5,
+                  color: bill.isClosed ? AppTheme.primaryLight : AppTheme.accent,
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: FutureBuilder<
+                      ({int personCount, double total, List<String> peopleNames})
+                    >(
                     future: provider.getBillSummary(bill.id),
                     builder: (context, snapshot) {
                       final data = snapshot.data;
@@ -797,6 +904,9 @@ class _RichBillCard extends StatelessWidget {
                       );
                     },
                   ),
+                ),
+              ),
+            ],
             ),
           ),
         ),
@@ -892,6 +1002,240 @@ class _StackedAvatars extends StatelessWidget {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Resume Banner ──────────────────────────────────────────────────
+
+class _ResumeBanner extends StatelessWidget {
+  final Bill bill;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  const _ResumeBanner({
+    required this.bill,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: Material(
+        color: isDark
+            ? AppTheme.accent.withValues(alpha: 0.12)
+            : AppTheme.accent.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: AppTheme.accent,
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.accent.withValues(alpha: 0.35),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    LucideIcons.utensils,
+                    size: 16,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Continue where you left off',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: isDark
+                              ? AppTheme.darkSubtleText
+                              : AppTheme.subtleText,
+                        ),
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        bill.title,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: isDark
+                              ? AppTheme.darkOnSurface
+                              : AppTheme.onSurface,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 7,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppTheme.accent,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Resume',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      SizedBox(width: 4),
+                      Icon(LucideIcons.arrowRight, size: 14, color: Colors.white),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── How It Works Step ──────────────────────────────────────────────
+
+class _HowItWorksStep extends StatelessWidget {
+  final String number;
+  final IconData icon;
+  final String label;
+  final String desc;
+  final bool isDark;
+
+  const _HowItWorksStep({
+    required this.number,
+    required this.icon,
+    required this.label,
+    required this.desc,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  gradient: AppTheme.primaryGradient,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.primary.withValues(alpha: 0.25),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Icon(icon, size: 20, color: Colors.white),
+              ),
+              Positioned(
+                top: -4,
+                right: -4,
+                child: Container(
+                  width: 18,
+                  height: 18,
+                  decoration: BoxDecoration(
+                    color: AppTheme.accent,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: isDark
+                          ? AppTheme.darkBackground
+                          : AppTheme.background,
+                      width: 2,
+                    ),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    number,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: isDark ? AppTheme.darkOnSurface : AppTheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            desc,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 11,
+              color: isDark ? AppTheme.darkSubtleText : AppTheme.subtleText,
+              height: 1.3,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── How It Works Arrow ─────────────────────────────────────────────
+
+class _HowItWorksArrow extends StatelessWidget {
+  final bool isDark;
+
+  const _HowItWorksArrow({required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 52),
+      child: Icon(
+        LucideIcons.arrowRight,
+        size: 16,
+        color: isDark
+            ? AppTheme.darkSubtleText.withValues(alpha: 0.5)
+            : AppTheme.subtleText.withValues(alpha: 0.5),
       ),
     );
   }
