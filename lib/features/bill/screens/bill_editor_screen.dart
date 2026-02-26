@@ -23,7 +23,53 @@ class BillEditorScreen extends StatefulWidget {
 class _BillEditorScreenState extends State<BillEditorScreen>
     with TickerProviderStateMixin {
   String? _filterPersonId;
+  double _taxRate = 7.0;
+  double _serviceRate = 10.0;
   late AnimationController _emptyBounceController;
+
+  static const _taxPresets = [0.0, 5.0, 7.0, 10.0, 15.0];
+  static const _servicePresets = [0.0, 5.0, 10.0, 15.0, 20.0];
+
+  void _onTaxChanged(double value) {
+    HapticFeedback.selectionClick();
+    setState(() => _taxRate = value);
+    context.read<BillProvider>().updateTaxAndService(taxRate: value);
+  }
+
+  void _onServiceChanged(double value) {
+    HapticFeedback.selectionClick();
+    setState(() => _serviceRate = value);
+    context.read<BillProvider>().updateTaxAndService(serviceChargeRate: value);
+  }
+
+  Widget _buildPresetChips({
+    required List<double> presets,
+    required double currentValue,
+    required ValueChanged<double> onSelected,
+    required Color activeColor,
+  }) {
+    return Wrap(
+      spacing: 6,
+      runSpacing: 4,
+      children: presets.map((preset) {
+        final isActive = (currentValue - preset).abs() < 0.05;
+        return ChoiceChip(
+          label: Text('${preset.toStringAsFixed(0)}%'),
+          selected: isActive,
+          selectedColor: activeColor.withValues(alpha: 0.2),
+          side: BorderSide(color: isActive ? activeColor : AppTheme.divider),
+          labelStyle: TextStyle(
+            color: isActive ? activeColor : null,
+            fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+          ),
+          onSelected: (_) {
+            HapticFeedback.lightImpact();
+            onSelected(preset);
+          },
+        );
+      }).toList(),
+    );
+  }
 
   @override
   void initState() {
@@ -36,6 +82,13 @@ class _BillEditorScreenState extends State<BillEditorScreen>
       final provider = context.read<BillProvider>();
       if (provider.currentBill?.id != widget.billId) {
         provider.loadBill(widget.billId);
+      }
+      final bill = provider.currentBill;
+      if (bill != null) {
+        setState(() {
+          _taxRate = bill.taxRate;
+          _serviceRate = bill.serviceChargeRate;
+        });
       }
     });
   }
@@ -149,7 +202,7 @@ class _BillEditorScreenState extends State<BillEditorScreen>
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(ctx);
-                context.push('/bill/${widget.billId}/tax');
+                context.push('/bill/${widget.billId}/summary');
               },
               style: ElevatedButton.styleFrom(minimumSize: const Size(0, 44)),
               child: const Text('Continue Anyway'),
@@ -158,7 +211,7 @@ class _BillEditorScreenState extends State<BillEditorScreen>
         ),
       );
     } else {
-      context.push('/bill/${widget.billId}/tax');
+      context.push('/bill/${widget.billId}/summary');
     }
   }
 
@@ -226,11 +279,14 @@ class _BillEditorScreenState extends State<BillEditorScreen>
                 ),
 
                 // ── Step Indicator ──
-                const StepProgressIndicator(currentStep: 3),
+                const StepProgressIndicator(currentStep: 2),
 
                 // ── People Bar (containerized) ──
                 if (provider.people.isNotEmpty)
                   _buildPeopleBar(provider, isDark),
+
+                // ── Inline Tax & Service ──
+                _buildTaxServiceTile(provider, isDark),
 
                 // ── Items List ──
                 Expanded(
@@ -281,7 +337,7 @@ class _BillEditorScreenState extends State<BillEditorScreen>
                                     ),
                                     const SizedBox(width: 10),
                                     Text(
-                                      'Calculate Split',
+                                      'See Summary',
                                       style: TextStyle(
                                         color: Colors.white,
                                         fontSize: 16,
@@ -404,6 +460,159 @@ class _BillEditorScreenState extends State<BillEditorScreen>
           ),
         );
       },
+    );
+  }
+
+  /// Collapsible inline tax & service charge controls.
+  Widget _buildTaxServiceTile(BillProvider provider, bool isDark) {
+    final subtotal = provider.subtotal;
+    final taxAmount = subtotal * (_taxRate / 100);
+    final serviceAmount = subtotal * (_serviceRate / 100);
+    final grandTotal = subtotal + taxAmount + serviceAmount;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.darkCard : Colors.white,
+        borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+        border: Border.all(
+          color: isDark ? AppTheme.darkDivider : AppTheme.divider,
+        ),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          leading: Icon(
+            LucideIcons.percent,
+            size: 18,
+            color: AppTheme.primaryLight,
+          ),
+          title: Row(
+            children: [
+              Text(
+                'Tax & Service',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.primaryLight,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                'Total ฿${grandTotal.toStringAsFixed(2)}',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: isDark ? AppTheme.darkSubtleText : AppTheme.subtleText,
+                ),
+              ),
+            ],
+          ),
+          children: [
+            // VAT section
+            Row(
+              children: [
+                Icon(
+                  LucideIcons.landmark,
+                  size: 14,
+                  color: AppTheme.primaryLight,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'VAT / Tax',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.primaryLight,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            _buildPresetChips(
+              presets: _taxPresets,
+              currentValue: _taxRate,
+              onSelected: _onTaxChanged,
+              activeColor: AppTheme.primaryLight,
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: Slider(
+                    value: _taxRate,
+                    min: 0,
+                    max: 20,
+                    divisions: 40,
+                    label: '${_taxRate.toStringAsFixed(1)}%',
+                    activeColor: AppTheme.primaryLight,
+                    onChanged: _onTaxChanged,
+                  ),
+                ),
+                SizedBox(
+                  width: 52,
+                  child: Text(
+                    '${_taxRate.toStringAsFixed(1)}%',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                    textAlign: TextAlign.end,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            // Service charge section
+            Row(
+              children: [
+                Icon(
+                  LucideIcons.heartHandshake,
+                  size: 14,
+                  color: AppTheme.accent,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Service Charge',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.accent,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            _buildPresetChips(
+              presets: _servicePresets,
+              currentValue: _serviceRate,
+              onSelected: _onServiceChanged,
+              activeColor: AppTheme.accent,
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: Slider(
+                    value: _serviceRate,
+                    min: 0,
+                    max: 25,
+                    divisions: 50,
+                    label: '${_serviceRate.toStringAsFixed(1)}%',
+                    activeColor: AppTheme.accent,
+                    onChanged: _onServiceChanged,
+                  ),
+                ),
+                SizedBox(
+                  width: 52,
+                  child: Text(
+                    '${_serviceRate.toStringAsFixed(1)}%',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                    textAlign: TextAlign.end,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 

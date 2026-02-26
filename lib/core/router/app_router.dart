@@ -2,9 +2,7 @@ import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:quicksplit/features/bill/screens/bill_editor_screen.dart';
-import 'package:quicksplit/features/bill/screens/create_bill_screen.dart';
 import 'package:quicksplit/features/bill/screens/add_people_screen.dart';
-import 'package:quicksplit/features/bill/screens/tax_tip_screen.dart';
 import 'package:quicksplit/features/bill/screens/summary_screen.dart';
 import 'package:quicksplit/features/home/screens/home_screen.dart';
 
@@ -40,15 +38,15 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => const HomeScreen(),
     ),
 
-    // Create New Bill
+    // New Bill — combined setup (name + date + people)
     GoRoute(
       path: '/bill/new',
       name: 'createBill',
       pageBuilder: (context, state) =>
-          _sharedAxisPage(state: state, child: const CreateBillScreen()),
+          _sharedAxisPage(state: state, child: const AddPeopleScreen()),
     ),
 
-    // Add People to Bill
+    // Edit People on existing Bill
     GoRoute(
       path: '/bill/:id/people',
       name: 'addPeople',
@@ -70,19 +68,6 @@ final GoRouter appRouter = GoRouter(
         return _sharedAxisPage(
           state: state,
           child: BillEditorScreen(billId: billId),
-        );
-      },
-    ),
-
-    // Tax & Tip
-    GoRoute(
-      path: '/bill/:id/tax',
-      name: 'taxTip',
-      pageBuilder: (context, state) {
-        final billId = state.pathParameters['id']!;
-        return _sharedAxisPage(
-          state: state,
-          child: TaxTipScreen(billId: billId),
         );
       },
     ),

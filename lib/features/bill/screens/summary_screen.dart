@@ -149,7 +149,7 @@ class _SummaryScreenState extends State<SummaryScreen> {
                     ),
 
                     // ── Step Indicator ──
-                    const StepProgressIndicator(currentStep: 5),
+                    const StepProgressIndicator(currentStep: 3),
 
                     // ── Content ──
                     Expanded(

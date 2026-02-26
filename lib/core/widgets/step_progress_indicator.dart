@@ -4,7 +4,7 @@ import 'package:quicksplit/core/theme/app_theme.dart';
 
 /// A pill/dot step progress indicator for the bill creation flow.
 ///
-/// Steps: 1=Create, 2=People, 3=Items, 4=Tax, 5=Summary
+/// Steps: 1=Setup, 2=Items, 3=Summary
 class StepProgressIndicator extends StatelessWidget {
   final int currentStep;
   final int totalSteps;
@@ -12,22 +12,14 @@ class StepProgressIndicator extends StatelessWidget {
   const StepProgressIndicator({
     super.key,
     required this.currentStep,
-    this.totalSteps = 5,
+    this.totalSteps = 3,
   });
 
-  static const List<String> stepLabels = [
-    'Create',
-    'People',
-    'Items',
-    'Tax',
-    'Summary',
-  ];
+  static const List<String> stepLabels = ['Setup', 'Items', 'Summary'];
 
   static const List<IconData> stepIcons = [
-    LucideIcons.filePlus,
     LucideIcons.users,
     LucideIcons.utensils,
-    LucideIcons.percent,
     LucideIcons.checkCircle,
   ];
 
