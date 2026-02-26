@@ -458,10 +458,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             const SizedBox(height: 20),
             Text(
               'No bills yet',
-              style: Theme.of(context)
-                  .textTheme
-                  .headlineSmall
-                  ?.copyWith(fontWeight: FontWeight.w700),
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 6),
             Text(
@@ -790,123 +789,140 @@ class _RichBillCard extends StatelessWidget {
                 // Left accent bar
                 Container(
                   width: 5,
-                  color: bill.isClosed ? AppTheme.primaryLight : AppTheme.accent,
+                  color: bill.isClosed
+                      ? AppTheme.primaryLight
+                      : AppTheme.accent,
                 ),
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
-                    child: FutureBuilder<
-                      ({int personCount, double total, List<String> peopleNames})
-                    >(
-                    future: provider.getBillSummary(bill.id),
-                    builder: (context, snapshot) {
-                      final data = snapshot.data;
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Top row: title + status dot
-                          Row(
-                            children: [
-                              // Status dot
-                              Container(
-                                width: 8,
-                                height: 8,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: bill.isClosed
-                                      ? AppTheme.primaryLight
-                                      : AppTheme.accent,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              // Title
-                              Expanded(
-                                child: Text(
-                                  bill.title,
-                                  style: Theme.of(context).textTheme.titleMedium
-                                      ?.copyWith(fontWeight: FontWeight.w600),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              // Amount badge
-                              if (data != null && data.total > 0)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: isDark
-                                        ? AppTheme.primary.withValues(
-                                            alpha: 0.2,
-                                          )
-                                        : AppTheme.primaryLight.withValues(
-                                            alpha: 0.12,
-                                          ),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    '฿${data.total.toStringAsFixed(0)}',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w700,
-                                      color: isDark
-                                          ? AppTheme.primaryLight
-                                          : AppTheme.primary,
+                    child:
+                        FutureBuilder<
+                          ({
+                            int personCount,
+                            double total,
+                            List<String> peopleNames,
+                          })
+                        >(
+                          future: provider.getBillSummary(bill.id),
+                          builder: (context, snapshot) {
+                            final data = snapshot.data;
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Top row: title + status dot
+                                Row(
+                                  children: [
+                                    // Status dot
+                                    Container(
+                                      width: 8,
+                                      height: 8,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: bill.isClosed
+                                            ? AppTheme.primaryLight
+                                            : AppTheme.accent,
+                                      ),
                                     ),
-                                  ),
+                                    const SizedBox(width: 10),
+                                    // Title
+                                    Expanded(
+                                      child: Text(
+                                        bill.title,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    // Amount badge
+                                    if (data != null && data.total > 0)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: isDark
+                                              ? AppTheme.primary.withValues(
+                                                  alpha: 0.2,
+                                                )
+                                              : AppTheme.primaryLight
+                                                    .withValues(alpha: 0.12),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          '฿${data.total.toStringAsFixed(0)}',
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w700,
+                                            color: isDark
+                                                ? AppTheme.primaryLight
+                                                : AppTheme.primary,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
                                 ),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          // Bottom row: date + avatars + status label
-                          Row(
-                            children: [
-                              // Date
-                              Icon(
-                                LucideIcons.calendar,
-                                size: 13,
-                                color: isDark
-                                    ? AppTheme.darkSubtleText
-                                    : AppTheme.subtleText,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                dateStr,
-                                style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(
+                                const SizedBox(height: 10),
+                                // Bottom row: date + avatars + status label
+                                Row(
+                                  children: [
+                                    // Date
+                                    Icon(
+                                      LucideIcons.calendar,
+                                      size: 13,
                                       color: isDark
                                           ? AppTheme.darkSubtleText
                                           : AppTheme.subtleText,
                                     ),
-                              ),
-                              const SizedBox(width: 12),
-                              // Person avatars (stacked)
-                              if (data != null && data.peopleNames.isNotEmpty)
-                                _StackedAvatars(names: data.peopleNames),
-                              const Spacer(),
-                              // Status label
-                              Text(
-                                bill.isClosed ? 'Closed' : 'Draft',
-                                style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(
-                                      color: bill.isClosed
-                                          ? AppTheme.primaryLight
-                                          : AppTheme.accent,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 11,
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      dateStr,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                            color: isDark
+                                                ? AppTheme.darkSubtleText
+                                                : AppTheme.subtleText,
+                                          ),
                                     ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      );
-                    },
+                                    const SizedBox(width: 12),
+                                    // Person avatars (stacked)
+                                    if (data != null &&
+                                        data.peopleNames.isNotEmpty)
+                                      _StackedAvatars(names: data.peopleNames),
+                                    const Spacer(),
+                                    // Status label
+                                    Text(
+                                      bill.isClosed ? 'Closed' : 'Draft',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                            color: bill.isClosed
+                                                ? AppTheme.primaryLight
+                                                : AppTheme.accent,
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 11,
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            );
+                          },
+                        ),
                   ),
                 ),
-              ),
-            ],
+              ],
             ),
           ),
         ),
@@ -1110,7 +1126,11 @@ class _ResumeBanner extends StatelessWidget {
                         ),
                       ),
                       SizedBox(width: 4),
-                      Icon(LucideIcons.arrowRight, size: 14, color: Colors.white),
+                      Icon(
+                        LucideIcons.arrowRight,
+                        size: 14,
+                        color: Colors.white,
+                      ),
                     ],
                   ),
                 ),
