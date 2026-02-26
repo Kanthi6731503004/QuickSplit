@@ -92,9 +92,12 @@ class AppTheme {
     return 16.0;
   }
 
-  /// Get responsive content max width for tablet layouts.
+  static const double desktopWidth = 1024.0;
+
+  /// Get responsive content max width for tablet/desktop layouts.
   static double? getMaxContentWidth(double width) {
-    if (width >= tabletWidth) return 560.0;
+    if (width >= desktopWidth) return 480.0;
+    if (width >= tabletWidth) return 480.0;
     return null;
   }
 

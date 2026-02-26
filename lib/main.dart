@@ -31,6 +31,24 @@ class QuickSplitApp extends StatelessWidget {
             darkTheme: AppTheme.darkTheme,
             themeMode: themeProvider.themeMode,
             routerConfig: appRouter,
+            builder: (context, child) {
+              return LayoutBuilder(
+                builder: (context, constraints) {
+                  final maxWidth = AppTheme.getMaxContentWidth(
+                    constraints.maxWidth,
+                  );
+                  if (maxWidth != null) {
+                    return Center(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(maxWidth: maxWidth),
+                        child: child,
+                      ),
+                    );
+                  }
+                  return child ?? const SizedBox.shrink();
+                },
+              );
+            },
           );
         },
       ),
