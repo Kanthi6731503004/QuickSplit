@@ -29,6 +29,12 @@ class _SummaryScreenState extends State<SummaryScreen> {
     _confettiController = ConfettiController(
       duration: const Duration(seconds: 3),
     );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final provider = context.read<BillProvider>();
+      if (provider.currentBill?.id != widget.billId) {
+        provider.loadBill(widget.billId);
+      }
+    });
   }
 
   @override
@@ -96,10 +102,22 @@ class _SummaryScreenState extends State<SummaryScreen> {
       children: [
         Consumer<BillProvider>(
           builder: (context, provider, _) {
+            if (provider.isLoading) {
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
+            }
+
             final bill = provider.currentBill;
             if (bill == null) {
               return const Scaffold(
                 body: Center(child: Text('Bill not found')),
+              );
+            }
+
+            if (provider.splits.isEmpty) {
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
               );
             }
 
