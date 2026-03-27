@@ -5,8 +5,11 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import 'package:quicksplit/core/providers/bill_provider.dart';
 import 'package:quicksplit/core/theme/app_theme.dart';
+import 'package:quicksplit/core/widgets/food_preset_grid.dart';
+import 'package:quicksplit/core/widgets/price_numpad.dart';
 
-/// Bottom sheet for adding a new item — keyboard-friendly, clean design.
+/// Bottom sheet for adding a new item — fully tap-based, no keyboard required.
+/// Uses FoodPresetGrid for item name and PriceNumpad for price entry.
 class AddItemSheet extends StatefulWidget {
   const AddItemSheet({super.key});
 
@@ -15,32 +18,19 @@ class AddItemSheet extends StatefulWidget {
 }
 
 class _AddItemSheetState extends State<AddItemSheet> {
-  final _nameController = TextEditingController();
-  final _priceController = TextEditingController();
-  final _nameFocus = FocusNode();
-  final _priceFocus = FocusNode();
+  String _itemName = '';
+  String _priceValue = '';
   final Set<String> _selectedPeople = {};
 
   bool get _isValid =>
-      _nameController.text.trim().isNotEmpty &&
-      _priceController.text.isNotEmpty &&
-      (double.tryParse(_priceController.text) ?? 0) > 0;
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _priceController.dispose();
-    _nameFocus.dispose();
-    _priceFocus.dispose();
-    super.dispose();
-  }
+      _itemName.isNotEmpty && (double.tryParse(_priceValue) ?? 0) > 0;
 
   void _addItem() {
     if (!_isValid) return;
     HapticFeedback.lightImpact();
     context.read<BillProvider>().addItem(
-      name: _nameController.text.trim(),
-      price: double.parse(_priceController.text),
+      name: _itemName,
+      price: double.parse(_priceValue),
       assignedUserIds:
           _selectedPeople.isNotEmpty ? _selectedPeople.toList() : null,
     );
@@ -51,99 +41,82 @@ class _AddItemSheetState extends State<AddItemSheet> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final provider = context.read<BillProvider>();
+    final dividerColor = isDark ? AppColors.borderDark : AppColors.border;
 
     return DraggableScrollableSheet(
-      initialChildSize: 0.75,
-      minChildSize: 0.5,
+      initialChildSize: 0.92,
+      minChildSize: 0.6,
       maxChildSize: 0.95,
       expand: false,
       builder: (_, scrollCtrl) {
         return SingleChildScrollView(
           controller: scrollCtrl,
-          padding: EdgeInsets.only(
-            left: 24,
-            right: 24,
-            top: 8,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 32,
-          ),
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Handle bar
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: dividerColor,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+
               Text(
                 'Add item',
                 style: GoogleFonts.dmSerifDisplay(fontSize: 20),
               ),
-              const SizedBox(height: 20),
-
-              // ── Name field ──
-              TextField(
-                controller: _nameController,
-                focusNode: _nameFocus,
+              const SizedBox(height: 4),
+              Text(
+                'Tap a category, then set the price',
                 style: GoogleFonts.dmSans(
-                  fontSize: 16,
+                  fontSize: 13,
                   color: isDark
-                      ? AppColors.textPrimaryDark
-                      : AppColors.textPrimary,
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondary,
                 ),
-                decoration: InputDecoration(
-                  hintText: 'What did you order?',
-                  hintStyle: GoogleFonts.dmSans(
-                    fontSize: 16,
-                    color: isDark
-                        ? AppColors.textMutedDark
-                        : AppColors.textMuted,
-                  ),
-                ),
-                textInputAction: TextInputAction.next,
-                textCapitalization: TextCapitalization.words,
-                onSubmitted: (_) => _priceFocus.requestFocus(),
-                onChanged: (_) => setState(() {}),
+              ),
+              const SizedBox(height: 16),
+
+              // ── Food preset grid ──
+              FoodPresetGrid(
+                selectedName: _itemName.isEmpty ? null : _itemName,
+                onSelected: (name) => setState(() => _itemName = name),
               ),
 
               const SizedBox(height: 16),
+              Divider(color: dividerColor, height: 1),
+              const SizedBox(height: 16),
 
-              // ── Price field ──
-              TextField(
-                controller: _priceController,
-                focusNode: _priceFocus,
-                style: AppTheme.amountStyle(
-                  size: 20,
-                  color: isDark
-                      ? AppColors.textPrimaryDark
-                      : AppColors.textPrimary,
-                ),
-                decoration: InputDecoration(
-                  prefixIcon: Padding(
-                    padding: const EdgeInsets.only(bottom: 0),
-                    child: Text(
-                      '฿',
-                      style: AppTheme.amountStyle(
-                        size: 20,
-                        color: AppColors.accent,
-                      ),
-                    ),
-                  ),
-                  prefixIconConstraints:
-                      const BoxConstraints(minWidth: 24, minHeight: 0),
-                  hintText: '0.00',
-                  hintStyle: AppTheme.amountStyle(
-                    size: 20,
-                    color: isDark
-                        ? AppColors.textMutedDark
-                        : AppColors.textMuted,
-                  ),
-                ),
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                textInputAction: TextInputAction.done,
-                onSubmitted: (_) => _addItem(),
-                onChanged: (_) => setState(() {}),
+              // ── Price section ──
+              Text(
+                'PRICE',
+                style: Theme.of(context).textTheme.labelSmall,
               ),
-
-              const SizedBox(height: 20),
+              const SizedBox(height: 8),
+              PriceDisplay(priceValue: _priceValue),
+              const SizedBox(height: 12),
+              PricePresetChips(
+                priceValue: _priceValue,
+                onSelected: (v) => setState(() => _priceValue = v),
+              ),
+              const SizedBox(height: 12),
+              PriceNumpad(
+                value: _priceValue,
+                onChanged: (v) => setState(() => _priceValue = v),
+              ),
 
               // ── Quick assign ──
               if (provider.people.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Divider(color: dividerColor, height: 1),
+                const SizedBox(height: 12),
                 Text(
                   'ASSIGN TO',
                   style: Theme.of(context).textTheme.labelSmall,
@@ -172,8 +145,7 @@ class _AddItemSheetState extends State<AddItemSheet> {
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 150),
                         height: 36,
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 10),
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
                         decoration: BoxDecoration(
                           color: isSelected
                               ? color.withValues(alpha: 0.15)
@@ -229,10 +201,9 @@ class _AddItemSheetState extends State<AddItemSheet> {
                     );
                   }).toList(),
                 ),
-                const SizedBox(height: 8),
               ],
 
-              const SizedBox(height: 8),
+              const SizedBox(height: 20),
 
               // ── Add button ──
               ElevatedButton(

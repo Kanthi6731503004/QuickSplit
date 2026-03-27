@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -7,11 +8,13 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import 'package:quicksplit/core/providers/bill_provider.dart';
 import 'package:quicksplit/core/theme/app_theme.dart';
+import 'package:quicksplit/core/widgets/people_count_selector.dart';
 
 /// Bottom sheet that replaces the AddPeopleScreen route.
-/// Handles bill creation (name + date + people) in one inline step.
+/// Fully tap-based: choose a count (2–8) and people are auto-named.
+/// Tap any chip to rename. No text entry required on the happy path.
 ///
-/// Pass [existingBillId] to open in edit mode (pre-filled, skips creation).
+/// Pass [existingBillId] to open in edit mode (pre-fills from provider).
 class QuickSetupSheet extends StatefulWidget {
   final String? existingBillId;
 
@@ -23,12 +26,10 @@ class QuickSetupSheet extends StatefulWidget {
 
 class _QuickSetupSheetState extends State<QuickSetupSheet> {
   final _nameController = TextEditingController();
-  final _addPersonController = TextEditingController();
-  final _nameFocus = FocusNode();
-  final _addPersonFocus = FocusNode();
 
   DateTime _date = DateTime.now();
-  final List<String> _people = [];
+  List<String> _people = [];
+  int? _selectedCount;
   bool _isLoading = false;
 
   bool get _isEditMode => widget.existingBillId != null;
@@ -50,9 +51,6 @@ class _QuickSetupSheetState extends State<QuickSetupSheet> {
   @override
   void dispose() {
     _nameController.dispose();
-    _addPersonController.dispose();
-    _nameFocus.dispose();
-    _addPersonFocus.dispose();
     super.dispose();
   }
 
@@ -72,27 +70,91 @@ class _QuickSetupSheetState extends State<QuickSetupSheet> {
       _nameController.text = bill.title;
       _date = bill.date;
     }
-    for (final p in provider.people) {
-      _people.add(p.name);
+    _people = provider.people.map((p) => p.name).toList();
+    if (_people.isNotEmpty) {
+      _selectedCount = _people.length.clamp(2, 8);
     }
   }
 
-  void _addPerson() {
-    final name = _addPersonController.text.trim();
-    if (name.isEmpty) return;
-    if (_people.any((p) => p.toLowerCase() == name.toLowerCase())) {
-      _addPersonController.clear();
-      return;
-    }
+  void _onCountSelected(int count) {
     HapticFeedback.selectionClick();
-    setState(() => _people.add(name));
-    _addPersonController.clear();
-    _addPersonFocus.requestFocus();
+    setState(() {
+      _selectedCount = count;
+      if (count > _people.length) {
+        for (int i = _people.length + 1; i <= count; i++) {
+          _people.add('Person $i');
+        }
+      } else {
+        _people = _people.sublist(0, count);
+      }
+    });
   }
 
-  void _removePerson(int index) {
-    HapticFeedback.selectionClick();
-    setState(() => _people.removeAt(index));
+  Future<void> _renamePerson(int index) async {
+    final ctrl = TextEditingController(text: _people[index]);
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Rename', style: GoogleFonts.dmSerifDisplay(fontSize: 18)),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          textCapitalization: TextCapitalization.words,
+          decoration: const InputDecoration(hintText: 'Enter name'),
+          onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
+            style: ElevatedButton.styleFrom(minimumSize: const Size(0, 40)),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    ctrl.dispose();
+    if (result != null && result.isNotEmpty) {
+      setState(() => _people[index] = result);
+    }
+  }
+
+  Future<void> _renameBill() async {
+    final ctrl = TextEditingController(text: _nameController.text);
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          'Split name',
+          style: GoogleFonts.dmSerifDisplay(fontSize: 18),
+        ),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          textCapitalization: TextCapitalization.words,
+          decoration: const InputDecoration(hintText: 'e.g. Pizza night'),
+          onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
+            style: ElevatedButton.styleFrom(minimumSize: const Size(0, 40)),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    ctrl.dispose();
+    if (result != null && result.isNotEmpty) {
+      setState(() => _nameController.text = result);
+    }
   }
 
   Future<void> _pickDate() async {
@@ -114,17 +176,22 @@ class _QuickSetupSheetState extends State<QuickSetupSheet> {
 
     try {
       if (_isEditMode) {
-        // Edit mode: sync people additions/removals
-        final existing = provider.people.map((p) => p.name).toList();
-        for (final name in _people) {
-          if (!existing.contains(name)) {
-            await provider.addPerson(name);
+        final existing = provider.people.toList();
+        final minLen = min(existing.length, _people.length);
+
+        // Rename changed people
+        for (int i = 0; i < minLen; i++) {
+          if (existing[i].name != _people[i]) {
+            await provider.updatePerson(existing[i].id, _people[i]);
           }
         }
-        for (final p in provider.people) {
-          if (!_people.contains(p.name)) {
-            await provider.removePerson(p.id);
-          }
+        // Add new people
+        for (int i = existing.length; i < _people.length; i++) {
+          await provider.addPerson(_people[i]);
+        }
+        // Remove extra people (reverse order to keep indices stable)
+        for (int i = existing.length - 1; i >= _people.length; i--) {
+          await provider.removePerson(existing[i].id);
         }
         if (mounted) Navigator.pop(context);
       } else {
@@ -170,39 +237,48 @@ class _QuickSetupSheetState extends State<QuickSetupSheet> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // ── Section 1: Bill details ──
-                Text(
-                  'SPLIT NAME',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondary,
-                    letterSpacing: 0.8,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _nameController,
-                  focusNode: _nameFocus,
-                  style: GoogleFonts.dmSerifDisplay(
-                    fontSize: 20,
-                    color: isDark
-                        ? AppColors.textPrimaryDark
-                        : AppColors.textPrimary,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: 'e.g. Pizza night',
-                    hintStyle: GoogleFonts.dmSerifDisplay(
-                      fontSize: 20,
-                      color: isDark
-                          ? AppColors.textMutedDark
-                          : AppColors.textMuted,
+                // Handle bar
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: borderColor,
+                      borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-                  textInputAction: TextInputAction.next,
-                  onSubmitted: (_) => _addPersonFocus.requestFocus(),
                 ),
-                const SizedBox(height: 12),
+
+                // ── Section 1: Bill name (tap pencil to rename) ──
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        _nameController.text,
+                        style: GoogleFonts.dmSerifDisplay(
+                          fontSize: 20,
+                          color: isDark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(
+                        LucideIcons.pencil,
+                        size: 16,
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondary,
+                      ),
+                      onPressed: _renameBill,
+                      tooltip: 'Rename split',
+                    ),
+                  ],
+                ),
                 GestureDetector(
                   onTap: _pickDate,
                   child: Row(
@@ -235,48 +311,35 @@ class _QuickSetupSheetState extends State<QuickSetupSheet> {
                 Divider(color: borderColor, height: 1),
                 const SizedBox(height: 20),
 
-                // ── Section 2: People ──
-                Row(
-                  children: [
-                    Text(
-                      "WHO'S SPLITTING?",
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: isDark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondary,
-                        letterSpacing: 0.8,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    if (_people.isNotEmpty)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? AppColors.surfaceAlt2
-                              : AppColors.surfaceAlt,
-                          borderRadius: BorderRadius.circular(100),
-                        ),
-                        child: Text(
-                          '${_people.length}',
-                          style: GoogleFonts.dmSans(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: isDark
-                                ? AppColors.textSecondaryDark
-                                : AppColors.textSecondary,
-                          ),
-                        ),
-                      ),
-                  ],
+                // ── Section 2: How many people? ──
+                Text(
+                  "HOW MANY PEOPLE?",
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondary,
+                    letterSpacing: 0.8,
+                  ),
                 ),
                 const SizedBox(height: 12),
+                PeopleCountSelector(
+                  selectedCount: _selectedCount,
+                  onCountSelected: _onCountSelected,
+                ),
 
-                // Person chips
-                if (_people.isNotEmpty)
+                // ── Person chips (tap to rename) ──
+                if (_people.isNotEmpty) ...[
+                  const SizedBox(height: 20),
+                  Text(
+                    'TAP A NAME TO RENAME',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondary,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
@@ -284,94 +347,66 @@ class _QuickSetupSheetState extends State<QuickSetupSheet> {
                       final index = entry.key;
                       final name = entry.value;
                       final color = AppTheme.getPersonColor(index);
-                      return _PersonChip(
-                        name: name,
-                        color: color,
-                        isDark: isDark,
-                        onRemove: () => _removePerson(index),
+                      return GestureDetector(
+                        onTap: () => _renamePerson(index),
+                        child: Container(
+                          height: 36,
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: 10),
+                          decoration: BoxDecoration(
+                            color: color.withValues(alpha: 0.12),
+                            border: Border.all(
+                              color: color.withValues(alpha: 0.4),
+                            ),
+                            borderRadius: BorderRadius.circular(100),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              CircleAvatar(
+                                backgroundColor: color,
+                                radius: 10,
+                                child: Text(
+                                  name.isNotEmpty
+                                      ? name[0].toUpperCase()
+                                      : '?',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                name,
+                                style: GoogleFonts.dmSans(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  color: isDark
+                                      ? AppColors.textPrimaryDark
+                                      : AppColors.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Icon(
+                                LucideIcons.pencil,
+                                size: 11,
+                                color: isDark
+                                    ? AppColors.textMutedDark
+                                    : AppColors.textMuted,
+                              ),
+                            ],
+                          ),
+                        ),
                       );
                     }).toList(),
                   ),
-
-                if (_people.isNotEmpty) const SizedBox(height: 12),
-
-                // Add person row
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _addPersonController,
-                        focusNode: _addPersonFocus,
-                        style: GoogleFonts.dmSans(
-                          fontSize: 15,
-                          color: isDark
-                              ? AppColors.textPrimaryDark
-                              : AppColors.textPrimary,
-                        ),
-                        decoration: InputDecoration(
-                          hintText: 'Add a name…',
-                          hintStyle: GoogleFonts.dmSans(
-                            fontSize: 15,
-                            color: isDark
-                                ? AppColors.textMutedDark
-                                : AppColors.textMuted,
-                          ),
-                        ),
-                        textInputAction: TextInputAction.done,
-                        onSubmitted: (_) => _addPerson(),
-                        textCapitalization: TextCapitalization.words,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    FilledButton(
-                      onPressed: _addPerson,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: isDark
-                            ? AppColors.surfaceAlt2
-                            : AppColors.surfaceAlt,
-                        foregroundColor: isDark
-                            ? AppColors.textPrimaryDark
-                            : AppColors.textPrimary,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 10,
-                        ),
-                        minimumSize: Size.zero,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(
-                            AppTheme.radiusButton,
-                          ),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: Text(
-                        'Add',
-                        style: GoogleFonts.dmSans(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-
-                if (_people.length == 1)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      'Add at least one more person',
-                      style: GoogleFonts.dmSans(
-                        fontSize: 12,
-                        color: isDark
-                            ? AppColors.textMutedDark
-                            : AppColors.textMuted,
-                      ),
-                    ),
-                  ),
+                ],
 
                 const SizedBox(height: 28),
 
-                // ── Proceed Button ──
+                // ── Proceed button ──
                 ElevatedButton(
                   onPressed: _canProceed ? _proceed : null,
                   child: _isLoading
@@ -383,7 +418,11 @@ class _QuickSetupSheetState extends State<QuickSetupSheet> {
                             color: Colors.white,
                           ),
                         )
-                      : Text(_isEditMode ? 'Save changes' : 'Start adding items →'),
+                      : Text(
+                          _isEditMode
+                              ? 'Save changes'
+                              : 'Start adding items →',
+                        ),
                 ),
               ],
             ),
@@ -398,67 +437,5 @@ class _QuickSetupSheetState extends State<QuickSetupSheet> {
     return date.year == now.year &&
         date.month == now.month &&
         date.day == now.day;
-  }
-}
-
-class _PersonChip extends StatelessWidget {
-  final String name;
-  final Color color;
-  final bool isDark;
-  final VoidCallback onRemove;
-
-  const _PersonChip({
-    required this.name,
-    required this.color,
-    required this.isDark,
-    required this.onRemove,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 36,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        border: Border.all(color: color.withValues(alpha: 0.4)),
-        borderRadius: BorderRadius.circular(100),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          CircleAvatar(
-            backgroundColor: color,
-            radius: 10,
-            child: Text(
-              name.isNotEmpty ? name[0].toUpperCase() : '?',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            name,
-            style: GoogleFonts.dmSans(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(width: 4),
-          GestureDetector(
-            onTap: onRemove,
-            child: Icon(
-              LucideIcons.x,
-              size: 14,
-              color: isDark ? AppColors.textMutedDark : AppColors.textMuted,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
