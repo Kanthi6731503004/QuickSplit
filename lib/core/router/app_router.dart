@@ -2,7 +2,6 @@ import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:quicksplit/features/bill/screens/bill_editor_screen.dart';
-import 'package:quicksplit/features/bill/screens/add_people_screen.dart';
 import 'package:quicksplit/features/bill/screens/summary_screen.dart';
 import 'package:quicksplit/features/home/screens/home_screen.dart';
 
@@ -27,6 +26,7 @@ CustomTransitionPage<void> _sharedAxisPage({
 }
 
 /// App-wide routing configuration using GoRouter.
+/// QuickSetup is now a bottom sheet on HomeScreen — no route needed.
 final GoRouter appRouter = GoRouter(
   initialLocation: '/',
   debugLogDiagnostics: true,
@@ -36,27 +36,6 @@ final GoRouter appRouter = GoRouter(
       path: '/',
       name: 'home',
       builder: (context, state) => const HomeScreen(),
-    ),
-
-    // New Bill — combined setup (name + date + people)
-    GoRoute(
-      path: '/bill/new',
-      name: 'createBill',
-      pageBuilder: (context, state) =>
-          _sharedAxisPage(state: state, child: const AddPeopleScreen()),
-    ),
-
-    // Edit People on existing Bill
-    GoRoute(
-      path: '/bill/:id/people',
-      name: 'addPeople',
-      pageBuilder: (context, state) {
-        final billId = state.pathParameters['id']!;
-        return _sharedAxisPage(
-          state: state,
-          child: AddPeopleScreen(billId: billId),
-        );
-      },
     ),
 
     // Bill Editor (Main Workspace)

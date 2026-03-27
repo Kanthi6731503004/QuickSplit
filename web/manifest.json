@@ -1,11 +1,11 @@
 {
-    "name": "quicksplit",
-    "short_name": "quicksplit",
+    "name": "BillTap",
+    "short_name": "BillTap",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Split bills with friends — no typing required.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

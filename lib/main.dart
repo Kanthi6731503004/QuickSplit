@@ -20,7 +20,9 @@ class QuickSplitApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => BillProvider()),
-        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(
+          create: (_) => ThemeProvider()..setThemeMode(ThemeMode.system),
+        ),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, _) {

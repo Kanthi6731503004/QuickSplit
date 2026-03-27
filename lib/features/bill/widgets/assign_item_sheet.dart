@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import 'package:quicksplit/core/models/models.dart';
 import 'package:quicksplit/core/providers/bill_provider.dart';
 import 'package:quicksplit/core/theme/app_theme.dart';
 
-/// Bottom sheet for assigning people to a bill item (the 2-tap flow).
-/// Features scale-bounce animation on avatar toggle.
+/// Bottom sheet for assigning people to a bill item.
 class AssignItemSheet extends StatelessWidget {
   final BillItem item;
   const AssignItemSheet({super.key, required this.item});
@@ -20,9 +21,8 @@ class AssignItemSheet extends StatelessWidget {
           orElse: () => item,
         );
         final assignedCount = liveItem.assignedUserIds.length;
-        final pricePerPerson = assignedCount > 0
-            ? liveItem.price / assignedCount
-            : liveItem.price;
+        final pricePerPerson =
+            assignedCount > 0 ? liveItem.price / assignedCount : liveItem.price;
 
         return Padding(
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
@@ -30,87 +30,90 @@ class AssignItemSheet extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Item info
-              Text(
-                'Assign: ${liveItem.name}',
-                style: Theme.of(context).textTheme.headlineMedium,
-              ),
-              Text(
-                '฿${liveItem.price.toStringAsFixed(2)}',
-                style: Theme.of(
-                  context,
-                ).textTheme.labelLarge?.copyWith(color: AppTheme.subtleText),
-              ),
-              const SizedBox(height: 20),
-
-              Text(
-                "Who's sharing this?",
-                style: Theme.of(context).textTheme.bodyLarge,
-              ),
-              const SizedBox(height: 12),
-
-              // Person toggle grid with scale-bounce
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: provider.people.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final person = entry.value;
-                  final color = AppTheme.getPersonColor(index);
-                  final isSelected = liveItem.assignedUserIds.contains(
-                    person.id,
-                  );
-
-                  return _BounceToggleAvatar(
-                    isSelected: isSelected,
-                    color: color,
-                    person: person,
-                    width: (MediaQuery.of(context).size.width - 72) / 2,
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      provider.togglePersonOnItem(liveItem.id, person.id);
-                    },
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 16),
-
-              // Live split info
-              if (assignedCount > 0)
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryLight.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    'Split: ฿${pricePerPerson.toStringAsFixed(2)} each ($assignedCount ${assignedCount == 1 ? "person" : "people"})',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.primary,
-                    ),
-                  ),
-                ),
-              const SizedBox(height: 16),
-
-              // Action buttons
+              // ── Item header ──
               Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton(
+                    child: Text(
+                      liveItem.name,
+                      style: GoogleFonts.dmSerifDisplay(fontSize: 18),
+                    ),
+                  ),
+                  Text(
+                    '฿${liveItem.price.toStringAsFixed(2)}',
+                    style: AppTheme.amountStyle(
+                      size: 18,
+                      color: AppColors.accent,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // ── People list ──
+              ...provider.people.asMap().entries.map((entry) {
+                final index = entry.key;
+                final person = entry.value;
+                final color = AppTheme.getPersonColor(index);
+                final isSelected =
+                    liveItem.assignedUserIds.contains(person.id);
+
+                return _PersonRow(
+                  person: person,
+                  color: color,
+                  isSelected: isSelected,
+                  shareAmount: isSelected ? pricePerPerson : null,
+                  isDark: Theme.of(context).brightness == Brightness.dark,
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    provider.togglePersonOnItem(liveItem.id, person.id);
+                  },
+                );
+              }),
+
+              const SizedBox(height: 16),
+
+              // ── Live split info ──
+              if (assignedCount > 0)
+                Center(
+                  child: Text(
+                    '฿${pricePerPerson.toStringAsFixed(2)} each · $assignedCount ${assignedCount == 1 ? "person" : "people"}',
+                    style: AppTheme.amountStyle(
+                      size: 13,
+                      color: AppColors.positive,
+                    ),
+                  ),
+                ),
+
+              const SizedBox(height: 16),
+
+              // ── Action buttons ──
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
                       onPressed: () {
                         HapticFeedback.lightImpact();
                         provider.assignItemToEveryone(liveItem.id);
                       },
-                      child: const Text('Everyone'),
+                      icon: const Icon(LucideIcons.users, size: 16),
+                      label: const Text('Everyone'),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(0, 48),
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppTheme.radiusButton),
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    flex: 2,
                     child: ElevatedButton(
                       onPressed: () => Navigator.pop(context),
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size(0, 48),
+                      ),
                       child: const Text('Done'),
                     ),
                   ),
@@ -124,27 +127,30 @@ class AssignItemSheet extends StatelessWidget {
   }
 }
 
-/// A person avatar tile that plays a scale-bounce (1.0 → 1.2 → 1.0) when toggled.
-class _BounceToggleAvatar extends StatefulWidget {
-  final bool isSelected;
-  final Color color;
+// ── Person Row ───────────────────────────────────────────────────────────────
+
+class _PersonRow extends StatefulWidget {
   final Person person;
-  final double width;
+  final Color color;
+  final bool isSelected;
+  final double? shareAmount;
+  final bool isDark;
   final VoidCallback onTap;
 
-  const _BounceToggleAvatar({
-    required this.isSelected,
-    required this.color,
+  const _PersonRow({
     required this.person,
-    required this.width,
+    required this.color,
+    required this.isSelected,
+    required this.shareAmount,
+    required this.isDark,
     required this.onTap,
   });
 
   @override
-  State<_BounceToggleAvatar> createState() => _BounceToggleAvatarState();
+  State<_PersonRow> createState() => _PersonRowState();
 }
 
-class _BounceToggleAvatarState extends State<_BounceToggleAvatar>
+class _PersonRowState extends State<_PersonRow>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnim;
@@ -159,13 +165,13 @@ class _BounceToggleAvatarState extends State<_BounceToggleAvatar>
       duration: const Duration(milliseconds: 300),
     );
     _scaleAnim = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.2), weight: 50),
-      TweenSequenceItem(tween: Tween(begin: 1.2, end: 1.0), weight: 50),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.15), weight: 50),
+      TweenSequenceItem(tween: Tween(begin: 1.15, end: 1.0), weight: 50),
     ]).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
-  void didUpdateWidget(_BounceToggleAvatar oldWidget) {
+  void didUpdateWidget(_PersonRow oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.isSelected != _prevSelected) {
       _prevSelected = widget.isSelected;
@@ -181,56 +187,82 @@ class _BounceToggleAvatarState extends State<_BounceToggleAvatar>
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    final borderColor =
+        widget.isDark ? AppColors.borderDark : AppColors.border;
+
+    return InkWell(
       onTap: widget.onTap,
-      child: ScaleTransition(
-        scale: _scaleAnim,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          width: widget.width,
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-          decoration: BoxDecoration(
-            color: widget.isSelected
-                ? widget.color.withValues(alpha: 0.15)
-                : Colors.transparent,
-            border: Border.all(
-              color: widget.isSelected ? widget.color : AppTheme.divider,
-              width: widget.isSelected ? 2 : 1,
-            ),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            children: [
-              CircleAvatar(
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+        child: Row(
+          children: [
+            ScaleTransition(
+              scale: _scaleAnim,
+              child: CircleAvatar(
                 backgroundColor: widget.color,
-                radius: 20,
+                radius: 16,
                 child: Text(
                   widget.person.initial,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 16,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
-              const SizedBox(height: 6),
-              Text(
-                widget.person.name,
-                style: TextStyle(
-                  fontWeight: widget.isSelected
-                      ? FontWeight.w600
-                      : FontWeight.w400,
-                ),
-                overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.person.name,
+                    style: GoogleFonts.dmSans(
+                      fontSize: 14,
+                      fontWeight: widget.isSelected
+                          ? FontWeight.w600
+                          : FontWeight.w400,
+                      color: widget.isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimary,
+                    ),
+                  ),
+                  if (widget.isSelected && widget.shareAmount != null)
+                    Text(
+                      '฿${widget.shareAmount!.toStringAsFixed(2)}',
+                      style: AppTheme.amountStyle(
+                        size: 12,
+                        color: widget.isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondary,
+                      ),
+                    ),
+                ],
               ),
-              if (widget.isSelected)
-                const Icon(
-                  Icons.check_circle,
-                  color: AppTheme.primaryLight,
-                  size: 18,
+            ),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: widget.isSelected
+                    ? widget.color
+                    : Colors.transparent,
+                border: Border.all(
+                  color: widget.isSelected
+                      ? widget.color
+                      : borderColor,
+                  width: 1.5,
                 ),
-            ],
-          ),
+              ),
+              child: widget.isSelected
+                  ? const Icon(Icons.check, size: 14, color: Colors.white)
+                  : null,
+            ),
+          ],
         ),
       ),
     );
