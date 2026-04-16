@@ -40,12 +40,12 @@
       --bg: #F7F5F2;
       --surface: #FFFFFF;
       --border: #E8E4DE;
-      --accent: #D97706;
-      --accent-hover: #B45309;
+      --accent: #B45309;
+      --accent-hover: #92400E;
       --accent-light: #FEF3C7;
       --text-primary: #1A1917;
       --text-secondary: #706C66;
-      --text-muted: #A09A92;
+      --text-muted: #857F78;
       --dark-cta: #242220;
       --radius-card: 16px;
       --radius-btn: 12px;
@@ -134,7 +134,12 @@
     .btn-primary:hover {
       background: var(--accent-hover);
       transform: translateY(-1px);
-      box-shadow: 0 4px 16px rgba(217, 119, 6, 0.28);
+      box-shadow: 0 4px 16px rgba(180, 83, 9, 0.28);
+    }
+
+    .btn:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
     }
 
     .btn-secondary {
@@ -147,6 +152,14 @@
       border-color: var(--accent);
       color: var(--accent);
       transform: translateY(-1px);
+    }
+
+    .nav-wordmark:focus-visible,
+    .nav-links a:focus-visible,
+    .footer-links a:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+      border-radius: 2px;
     }
 
     /* ─── Navigation ─────────────────────────────────────────────────────────── */
@@ -237,7 +250,7 @@
     .hero-orb-1 {
       width: 600px;
       height: 600px;
-      background: rgba(217, 119, 6, 0.06);
+      background: rgba(180, 83, 9, 0.06);
       top: -200px;
       right: -100px;
     }
@@ -245,7 +258,7 @@
     .hero-orb-2 {
       width: 400px;
       height: 400px;
-      background: rgba(217, 119, 6, 0.06);
+      background: rgba(180, 83, 9, 0.06);
       bottom: -100px;
       left: -80px;
     }
@@ -527,7 +540,7 @@
 
     .feature-card:hover {
       border-color: var(--accent);
-      box-shadow: 0 4px 24px rgba(217, 119, 6, 0.10);
+      box-shadow: 0 4px 24px rgba(180, 83, 9, 0.10);
       transform: translateY(-2px);
     }
 
@@ -599,14 +612,6 @@
       color: #FFFFFF;
       border-radius: 12px;
       padding: 12px 20px;
-      text-decoration: none;
-      transition: background 0.2s, transform 0.2s;
-      cursor: default;
-    }
-
-    .store-badge:hover {
-      background: #1a1917;
-      transform: translateY(-1px);
     }
 
     .store-badge-icon {
@@ -691,7 +696,7 @@
   <!-- ══════════════════════════════════════════════════════════════
        NAVIGATION
   ══════════════════════════════════════════════════════════════════ -->
-  <nav class="nav" id="nav" role="navigation" aria-label="Main navigation">
+  <nav class="nav" id="nav" aria-label="Main navigation">
     <div class="container">
       <div class="nav-inner">
         <a href="/" class="nav-wordmark">QuickSplit</a>
@@ -705,6 +710,8 @@
       </div>
     </div>
   </nav>
+
+  <main>
 
   <!-- ══════════════════════════════════════════════════════════════
        HERO
@@ -861,14 +868,14 @@
         <div class="cta-actions">
           <a href="/app" class="btn btn-primary">Try QuickSplit Free</a>
           <div class="store-badges">
-            <div class="store-badge" aria-label="Coming soon on App Store">
+            <div class="store-badge">
               <span class="store-badge-icon" aria-hidden="true">&#xF8FF;</span>
               <div class="store-badge-text">
                 <span class="store-badge-label">Coming Soon on</span>
                 <span class="store-badge-name">App Store</span>
               </div>
             </div>
-            <div class="store-badge" aria-label="Coming soon on Google Play">
+            <div class="store-badge">
               <span class="store-badge-icon" aria-hidden="true">&#9654;</span>
               <div class="store-badge-text">
                 <span class="store-badge-label">Coming Soon on</span>
@@ -880,6 +887,8 @@
       </div>
     </div>
   </section>
+
+  </main>
 
   <!-- ══════════════════════════════════════════════════════════════
        FOOTER
