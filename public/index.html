@@ -1,89 +1,939 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Welcome to Firebase Hosting</title>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>QuickSplit — Split Bills, Not Friendships</title>
+  <meta name="description" content="Split restaurant bills fairly in under 60 seconds. Proportional tax, shared items, and instant summaries. Free, no account required.">
+  <meta property="og:title" content="QuickSplit — Fair Bill Splitting">
+  <meta property="og:description" content="Split restaurant bills fairly in under 60 seconds.">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* ─── Reset & Base ──────────────────────────────────────────────────────── */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-    <!-- update the version number as needed -->
-    <script defer src="/__/firebase/12.9.0/firebase-app-compat.js"></script>
-    <!-- include only the Firebase features as you need -->
-    <script defer src="/__/firebase/12.9.0/firebase-auth-compat.js"></script>
-    <script defer src="/__/firebase/12.9.0/firebase-database-compat.js"></script>
-    <script defer src="/__/firebase/12.9.0/firebase-firestore-compat.js"></script>
-    <script defer src="/__/firebase/12.9.0/firebase-functions-compat.js"></script>
-    <script defer src="/__/firebase/12.9.0/firebase-messaging-compat.js"></script>
-    <script defer src="/__/firebase/12.9.0/firebase-storage-compat.js"></script>
-    <script defer src="/__/firebase/12.9.0/firebase-analytics-compat.js"></script>
-    <script defer src="/__/firebase/12.9.0/firebase-remote-config-compat.js"></script>
-    <script defer src="/__/firebase/12.9.0/firebase-performance-compat.js"></script>
-    <!-- 
-      initialize the SDK after all desired features are loaded, set useEmulator to false
-      to avoid connecting the SDK to running emulators.
-    -->
-    <script defer src="/__/firebase/init.js?useEmulator=true"></script>
+    html {
+      scroll-behavior: smooth;
+      -webkit-text-size-adjust: 100%;
+    }
 
-    <style media="screen">
-      body { background: #ECEFF1; color: rgba(0,0,0,0.87); font-family: Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; }
-      #message { background: white; max-width: 360px; margin: 100px auto 16px; padding: 32px 24px; border-radius: 3px; }
-      #message h2 { color: #ffa100; font-weight: bold; font-size: 16px; margin: 0 0 8px; }
-      #message h1 { font-size: 22px; font-weight: 300; color: rgba(0,0,0,0.6); margin: 0 0 16px;}
-      #message p { line-height: 140%; margin: 16px 0 24px; font-size: 14px; }
-      #message a { display: block; text-align: center; background: #039be5; text-transform: uppercase; text-decoration: none; color: white; padding: 16px; border-radius: 4px; }
-      #message, #message a { box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24); }
-      #load { color: rgba(0,0,0,0.4); text-align: center; font-size: 13px; }
-      @media (max-width: 600px) {
-        body, #message { margin-top: 0; background: white; box-shadow: none; }
-        body { border-top: 16px solid #ffa100; }
+    body {
+      background: #F7F5F2;
+      color: #1A1917;
+      font-family: 'DM Sans', system-ui, sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ─── Design Tokens ─────────────────────────────────────────────────────── */
+    :root {
+      --bg: #F7F5F2;
+      --surface: #FFFFFF;
+      --border: #E8E4DE;
+      --accent: #D97706;
+      --accent-hover: #B45309;
+      --accent-light: #FEF3C7;
+      --text-primary: #1A1917;
+      --text-secondary: #706C66;
+      --text-muted: #A09A92;
+      --dark-cta: #242220;
+      --radius-card: 16px;
+      --radius-btn: 12px;
+      --max-width: 1080px;
+      --section-py: clamp(64px, 8vw, 120px);
+      --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* ─── Scroll Reveal ─────────────────────────────────────────────────────── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.6s var(--ease-out-expo), transform 0.6s var(--ease-out-expo);
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .reveal {
+        opacity: 1;
+        transform: none;
+        transition: none;
       }
-    </style>
-  </head>
-  <body>
-    <div id="message">
-      <h2>Welcome</h2>
-      <h1>Firebase Hosting Setup Complete</h1>
-      <p>You're seeing this because you've successfully setup Firebase Hosting. Now it's time to go build something extraordinary!</p>
-      <a target="_blank" href="https://firebase.google.com/docs/hosting/">Open Hosting Documentation</a>
+    }
+
+    /* ─── Layout Helpers ─────────────────────────────────────────────────────── */
+    .container {
+      width: 100%;
+      max-width: var(--max-width);
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    .section-divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 0;
+    }
+
+    /* ─── Typography ─────────────────────────────────────────────────────────── */
+    .eyebrow {
+      display: inline-block;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 16px;
+    }
+
+    .display-heading {
+      font-family: 'DM Serif Display', Georgia, serif;
+      font-weight: 400;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+    }
+
+    /* ─── Buttons ────────────────────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 14px 28px;
+      border-radius: var(--radius-btn);
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.2s, border-color 0.2s, color 0.2s, transform 0.2s, box-shadow 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #FFFFFF;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(217, 119, 6, 0.28);
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--text-primary);
+      border: 1.5px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      transform: translateY(-1px);
+    }
+
+    /* ─── Navigation ─────────────────────────────────────────────────────────── */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(247, 245, 242, 0.88);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid transparent;
+      transition: border-color 0.3s;
+    }
+
+    .nav.scrolled {
+      border-bottom-color: var(--border);
+    }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+      gap: 32px;
+    }
+
+    .nav-wordmark {
+      font-family: 'DM Serif Display', Georgia, serif;
+      font-size: 22px;
+      font-weight: 400;
+      color: var(--text-primary);
+      text-decoration: none;
+      letter-spacing: -0.01em;
+      flex-shrink: 0;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover {
+      color: var(--text-primary);
+    }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .nav-cta {
+      padding: 10px 20px;
+      font-size: 14px;
+    }
+
+    @media (max-width: 639px) {
+      .nav-links {
+        display: none;
+      }
+    }
+
+    /* ─── Hero ───────────────────────────────────────────────────────────────── */
+    .hero {
+      position: relative;
+      padding: var(--section-py) 0;
+      overflow: hidden;
+    }
+
+    .hero-orb {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+      filter: blur(80px);
+      z-index: 0;
+    }
+
+    .hero-orb-1 {
+      width: 600px;
+      height: 600px;
+      background: rgba(217, 119, 6, 0.06);
+      top: -200px;
+      right: -100px;
+    }
+
+    .hero-orb-2 {
+      width: 400px;
+      height: 400px;
+      background: rgba(217, 119, 6, 0.06);
+      bottom: -100px;
+      left: -80px;
+    }
+
+    .hero-inner {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      align-items: center;
+      gap: 64px;
+    }
+
+    .hero-content {
+      max-width: 520px;
+    }
+
+    .hero-headline {
+      font-size: clamp(2.5rem, 1rem + 5vw, 4.5rem);
+      margin-bottom: 20px;
+    }
+
+    .hero-subtext {
+      font-size: 17px;
+      color: var(--text-secondary);
+      line-height: 1.65;
+      margin-bottom: 36px;
+      max-width: 420px;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    /* Phone Mockup */
+    .hero-visual {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .phone-frame {
+      width: 260px;
+      background: var(--surface);
+      border-radius: 28px;
+      box-shadow:
+        0 0 0 1px rgba(0,0,0,0.06),
+        0 8px 24px rgba(0,0,0,0.08),
+        0 24px 64px rgba(0,0,0,0.12);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .phone-notch {
+      background: var(--text-primary);
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .phone-notch-pill {
+      width: 80px;
+      height: 6px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 3px;
+    }
+
+    .phone-screen {
+      padding: 20px 18px 24px;
+    }
+
+    .phone-screen-header {
+      font-family: 'DM Serif Display', Georgia, serif;
+      font-size: 20px;
+      font-weight: 400;
+      color: var(--text-primary);
+      margin-bottom: 18px;
+      letter-spacing: -0.01em;
+    }
+
+    .bill-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .bill-row:last-of-type {
+      border-bottom: none;
+    }
+
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 600;
+      color: #FFFFFF;
+      flex-shrink: 0;
+    }
+
+    .avatar-alice { background: #E85D3F; }
+    .avatar-bob   { background: #3B82F6; }
+    .avatar-carol { background: #16A34A; }
+
+    .bill-name {
+      flex: 1;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .bill-amount {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+    }
+
+    .bill-total-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 2px solid var(--border);
+    }
+
+    .bill-total-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .bill-total-amount {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    @media (max-width: 800px) {
+      .hero-inner {
+        grid-template-columns: 1fr;
+        gap: 48px;
+      }
+
+      .hero-content {
+        max-width: 100%;
+        text-align: center;
+      }
+
+      .hero-subtext {
+        max-width: 100%;
+      }
+
+      .hero-actions {
+        justify-content: center;
+      }
+
+      .hero-visual {
+        order: -1;
+      }
+
+      .phone-frame {
+        width: 220px;
+      }
+    }
+
+    @media (max-width: 639px) {
+      .hero-actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .hero-actions .btn {
+        text-align: center;
+        justify-content: center;
+      }
+    }
+
+    /* ─── How It Works ───────────────────────────────────────────────────────── */
+    .how-it-works {
+      padding: var(--section-py) 0;
+    }
+
+    .section-intro {
+      text-align: center;
+      margin-bottom: 64px;
+    }
+
+    .section-intro .display-heading {
+      font-size: clamp(2rem, 1rem + 3vw, 3rem);
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+    }
+
+    .step {
+      text-align: center;
+      padding: 32px 24px;
+    }
+
+    .step-number {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: var(--accent-light);
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 700;
+      font-family: 'DM Sans', sans-serif;
+      margin: 0 auto 20px;
+    }
+
+    .step-title {
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+
+    .step-desc {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    @media (max-width: 639px) {
+      .steps {
+        grid-template-columns: 1fr;
+        gap: 0;
+      }
+
+      .step {
+        padding: 28px 16px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .step:last-child {
+        border-bottom: none;
+      }
+    }
+
+    /* ─── Features ───────────────────────────────────────────────────────────── */
+    .features {
+      padding: var(--section-py) 0;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-card);
+      padding: 32px;
+      transition: border-color 0.25s, box-shadow 0.25s, transform 0.25s;
+    }
+
+    .feature-card:hover {
+      border-color: var(--accent);
+      box-shadow: 0 4px 24px rgba(217, 119, 6, 0.10);
+      transform: translateY(-2px);
+    }
+
+    .feature-icon {
+      font-size: 28px;
+      margin-bottom: 16px;
+      display: block;
+    }
+
+    .feature-title {
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+
+    .feature-desc {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.65;
+    }
+
+    @media (max-width: 639px) {
+      .features-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ─── Final CTA ──────────────────────────────────────────────────────────── */
+    .final-cta {
+      padding: var(--section-py) 0;
+      background: linear-gradient(180deg, #F7F5F2 0%, #F3F0EB 100%);
+    }
+
+    .final-cta-inner {
+      text-align: center;
+    }
+
+    .final-cta-headline {
+      font-size: clamp(2rem, 1rem + 3.5vw, 3.5rem);
+      margin-bottom: 16px;
+    }
+
+    .final-cta-subtext {
+      font-size: 16px;
+      color: var(--text-secondary);
+      margin-bottom: 40px;
+    }
+
+    .cta-actions {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .store-badges {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .store-badge {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--dark-cta);
+      color: #FFFFFF;
+      border-radius: 12px;
+      padding: 12px 20px;
+      text-decoration: none;
+      transition: background 0.2s, transform 0.2s;
+      cursor: default;
+    }
+
+    .store-badge:hover {
+      background: #1a1917;
+      transform: translateY(-1px);
+    }
+
+    .store-badge-icon {
+      font-size: 22px;
+      line-height: 1;
+    }
+
+    .store-badge-text {
+      display: flex;
+      flex-direction: column;
+      text-align: left;
+    }
+
+    .store-badge-label {
+      font-size: 10px;
+      font-weight: 400;
+      color: rgba(255,255,255,0.65);
+      letter-spacing: 0.04em;
+      line-height: 1.2;
+    }
+
+    .store-badge-name {
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+
+    /* ─── Footer ─────────────────────────────────────────────────────────────── */
+    .footer {
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+      padding: 28px 0;
+    }
+
+    .footer-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .footer-copy {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 24px;
+      list-style: none;
+    }
+
+    .footer-links a {
+      font-size: 13px;
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover {
+      color: var(--text-secondary);
+    }
+
+    @media (max-width: 639px) {
+      .footer-inner {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 12px;
+      }
+    }
+
+    /* ─── Reveal stagger helpers ─────────────────────────────────────────────── */
+    .reveal-delay-1 { transition-delay: 0.05s; }
+    .reveal-delay-2 { transition-delay: 0.12s; }
+    .reveal-delay-3 { transition-delay: 0.19s; }
+    .reveal-delay-4 { transition-delay: 0.26s; }
+  </style>
+</head>
+<body>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       NAVIGATION
+  ══════════════════════════════════════════════════════════════════ -->
+  <nav class="nav" id="nav" role="navigation" aria-label="Main navigation">
+    <div class="container">
+      <div class="nav-inner">
+        <a href="/" class="nav-wordmark">QuickSplit</a>
+        <div class="nav-right">
+          <ul class="nav-links">
+            <li><a href="#features">Features</a></li>
+            <li><a href="#how-it-works">How It Works</a></li>
+          </ul>
+          <a href="/app" class="btn btn-primary nav-cta">Try QuickSplit</a>
+        </div>
+      </div>
     </div>
-    <p id="load">Firebase SDK Loading&hellip;</p>
+  </nav>
 
-    <script>
-      document.addEventListener('DOMContentLoaded', function() {
-        const loadEl = document.querySelector('#load');
-        // // 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
-        // // The Firebase SDK is initialized and available here!
-        //
-        // firebase.auth().onAuthStateChanged(user => { });
-        // firebase.database().ref('/path/to/ref').on('value', snapshot => { });
-        // firebase.firestore().doc('/foo/bar').get().then(() => { });
-        // firebase.functions().httpsCallable('yourFunction')().then(() => { });
-        // firebase.messaging().requestPermission().then(() => { });
-        // firebase.storage().ref('/path/to/ref').getDownloadURL().then(() => { });
-        // firebase.analytics(); // call to activate
-        // firebase.analytics().logEvent('tutorial_completed');
-        // firebase.performance(); // call to activate
-        //
-        // // 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+  <!-- ══════════════════════════════════════════════════════════════
+       HERO
+  ══════════════════════════════════════════════════════════════════ -->
+  <section class="hero" aria-labelledby="hero-heading">
+    <div class="hero-orb hero-orb-1" aria-hidden="true"></div>
+    <div class="hero-orb hero-orb-2" aria-hidden="true"></div>
 
-        try {
-          let app = firebase.app();
-          let features = [
-            'auth', 
-            'database', 
-            'firestore',
-            'functions',
-            'messaging', 
-            'storage', 
-            'analytics', 
-            'remoteConfig',
-            'performance',
-          ].filter(feature => typeof app[feature] === 'function');
-          loadEl.textContent = `Firebase SDK loaded with ${features.join(', ')}`;
-        } catch (e) {
-          console.error(e);
-          loadEl.textContent = 'Error loading the Firebase SDK, check the console.';
+    <div class="container">
+      <div class="hero-inner">
+
+        <!-- Copy -->
+        <div class="hero-content reveal">
+          <span class="eyebrow">Fair splits in under 60 seconds</span>
+          <h1 class="display-heading hero-headline" id="hero-heading">
+            Split bills,<br>not friendships.
+          </h1>
+          <p class="hero-subtext">
+            Tax, tip, and shared items — handled automatically. No more spreadsheets, no more guessing.
+          </p>
+          <div class="hero-actions">
+            <a href="/app" class="btn btn-primary">Try QuickSplit Free</a>
+            <a href="#how-it-works" class="btn btn-secondary">See How It Works</a>
+          </div>
+        </div>
+
+        <!-- Phone Mockup -->
+        <div class="hero-visual reveal reveal-delay-2">
+          <div class="phone-frame" role="img" aria-label="QuickSplit bill summary showing Alice owes ฿285.50, Bob owes ฿192.00, Carol owes ฿347.50, total ฿825.00">
+            <div class="phone-notch" aria-hidden="true">
+              <div class="phone-notch-pill"></div>
+            </div>
+            <div class="phone-screen">
+              <div class="phone-screen-header">Summary</div>
+
+              <div class="bill-row">
+                <div class="avatar avatar-alice">A</div>
+                <div class="bill-name">Alice</div>
+                <div class="bill-amount">฿ 285.50</div>
+              </div>
+
+              <div class="bill-row">
+                <div class="avatar avatar-bob">B</div>
+                <div class="bill-name">Bob</div>
+                <div class="bill-amount">฿ 192.00</div>
+              </div>
+
+              <div class="bill-row">
+                <div class="avatar avatar-carol">C</div>
+                <div class="bill-name">Carol</div>
+                <div class="bill-amount">฿ 347.50</div>
+              </div>
+
+              <div class="bill-total-row">
+                <span class="bill-total-label">Total</span>
+                <span class="bill-total-amount">฿ 825.00</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <hr class="section-divider">
+
+  <!-- ══════════════════════════════════════════════════════════════
+       HOW IT WORKS
+  ══════════════════════════════════════════════════════════════════ -->
+  <section class="how-it-works" id="how-it-works" aria-labelledby="how-heading">
+    <div class="container">
+
+      <div class="section-intro reveal">
+        <span class="eyebrow">How It Works</span>
+        <h2 class="display-heading" id="how-heading">Three taps to fair.</h2>
+      </div>
+
+      <div class="steps">
+        <div class="step reveal reveal-delay-1">
+          <div class="step-number" aria-hidden="true">1</div>
+          <div class="step-title">Add People</div>
+          <p class="step-desc">Name everyone at the table</p>
+        </div>
+        <div class="step reveal reveal-delay-2">
+          <div class="step-number" aria-hidden="true">2</div>
+          <div class="step-title">Add Items</div>
+          <p class="step-desc">Enter each dish and assign it</p>
+        </div>
+        <div class="step reveal reveal-delay-3">
+          <div class="step-number" aria-hidden="true">3</div>
+          <div class="step-title">Get Splits</div>
+          <p class="step-desc">Fair totals, ready to share</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <hr class="section-divider">
+
+  <!-- ══════════════════════════════════════════════════════════════
+       FEATURES
+  ══════════════════════════════════════════════════════════════════ -->
+  <section class="features" id="features" aria-labelledby="features-heading">
+    <div class="container">
+
+      <div class="section-intro reveal">
+        <span class="eyebrow">Why QuickSplit</span>
+        <h2 class="display-heading" id="features-heading">The details that matter.</h2>
+      </div>
+
+      <div class="features-grid">
+        <article class="feature-card reveal reveal-delay-1">
+          <span class="feature-icon" aria-hidden="true">⚖️</span>
+          <div class="feature-title">Proportional Tax &amp; Tip</div>
+          <p class="feature-desc">Distributed by what you ordered, not split evenly across the table.</p>
+        </article>
+
+        <article class="feature-card reveal reveal-delay-2">
+          <span class="feature-icon" aria-hidden="true">🍽️</span>
+          <div class="feature-title">Shared Items</div>
+          <p class="feature-desc">Split appetizers and shared dishes among any combination of people.</p>
+        </article>
+
+        <article class="feature-card reveal reveal-delay-3">
+          <span class="feature-icon" aria-hidden="true">💬</span>
+          <div class="feature-title">Share Summary</div>
+          <p class="feature-desc">Send formatted breakdowns via WhatsApp, LINE, or any messaging app.</p>
+        </article>
+
+        <article class="feature-card reveal reveal-delay-4">
+          <span class="feature-icon" aria-hidden="true">⚡</span>
+          <div class="feature-title">Under 60 Seconds</div>
+          <p class="feature-desc">Five taps from start to a fair split. No sign-up, no friction.</p>
+        </article>
+      </div>
+
+    </div>
+  </section>
+
+  <hr class="section-divider">
+
+  <!-- ══════════════════════════════════════════════════════════════
+       FINAL CTA
+  ══════════════════════════════════════════════════════════════════ -->
+  <section class="final-cta" aria-labelledby="cta-heading">
+    <div class="container">
+      <div class="final-cta-inner reveal">
+        <h2 class="display-heading final-cta-headline" id="cta-heading">
+          Ready to split fairly?
+        </h2>
+        <p class="final-cta-subtext">Free. No account required. Works in your browser.</p>
+        <div class="cta-actions">
+          <a href="/app" class="btn btn-primary">Try QuickSplit Free</a>
+          <div class="store-badges">
+            <div class="store-badge" aria-label="Coming soon on App Store">
+              <span class="store-badge-icon" aria-hidden="true">&#xF8FF;</span>
+              <div class="store-badge-text">
+                <span class="store-badge-label">Coming Soon on</span>
+                <span class="store-badge-name">App Store</span>
+              </div>
+            </div>
+            <div class="store-badge" aria-label="Coming soon on Google Play">
+              <span class="store-badge-icon" aria-hidden="true">&#9654;</span>
+              <div class="store-badge-text">
+                <span class="store-badge-label">Coming Soon on</span>
+                <span class="store-badge-name">Google Play</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       FOOTER
+  ══════════════════════════════════════════════════════════════════ -->
+  <footer class="footer" role="contentinfo">
+    <div class="container">
+      <div class="footer-inner">
+        <span class="footer-copy">&copy; 2026 QuickSplit</span>
+        <ul class="footer-links">
+          <li><a href="/privacy">Privacy</a></li>
+          <li><a href="/terms">Terms</a></li>
+        </ul>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       SCRIPTS
+  ══════════════════════════════════════════════════════════════════ -->
+  <script>
+    // Sticky nav border on scroll
+    (function () {
+      var nav = document.getElementById('nav');
+      if (!nav) return;
+      function onScroll() {
+        if (window.scrollY > 8) {
+          nav.classList.add('scrolled');
+        } else {
+          nav.classList.remove('scrolled');
         }
-      });
-    </script>
-  </body>
+      }
+      window.addEventListener('scroll', onScroll, { passive: true });
+    })();
+  </script>
+
+  <script>
+    // Scroll reveal
+    (function () {
+      var targets = document.querySelectorAll('.reveal');
+      if (!window.IntersectionObserver) {
+        targets.forEach(function (t) { t.classList.add('visible'); });
+        return;
+      }
+      var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+      targets.forEach(function (t) { observer.observe(t); });
+    })();
+  </script>
+
+</body>
 </html>
